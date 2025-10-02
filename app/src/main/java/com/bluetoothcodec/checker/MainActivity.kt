@@ -1035,7 +1035,7 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                     // Draw signal sources as dots around the chart
                     val angleStep = 360f / maxOf(nearbySignals, 8)
                     
-                    // First, draw connected Bluetooth devices
+                    // First, draw connected Bluetooth devices with their signal strength circles
                     devices.forEachIndexed { index, device ->
                         val angle = Math.toRadians((index * 60.0)) // Spread connected devices
                         val distance = maxRadius * 0.7f // Fixed distance for connected devices
@@ -1043,7 +1043,19 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
                         val y = centerY + (distance * Math.sin(angle)).toFloat()
                         
-                        // Connected devices - green with border
+                        // Draw signal strength circle for each device
+                        val signalStrength = device.signalStrength ?: 50 // Default to 50% if null
+                        val signalRadius = (signalStrength / 100f) * 40f + 20f // 20-60px radius based on signal
+                        val signalAlpha = (signalStrength / 100f) * 0.3f + 0.1f // 0.1-0.4 alpha
+                        
+                        // Signal strength circle
+                        drawCircle(
+                            color = Color.Green.copy(alpha = signalAlpha),
+                            radius = signalRadius,
+                            center = androidx.compose.ui.geometry.Offset(x, y)
+                        )
+                        
+                        // Device dot - green with border
                         drawCircle(
                             color = Color.Green,
                             radius = 10f,

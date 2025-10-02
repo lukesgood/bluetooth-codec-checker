@@ -1248,150 +1248,86 @@ class BluetoothCodecManager(private val context: Context) {
     private fun getDeviceSupportedCodecs(device: android.bluetooth.BluetoothDevice): List<String> {
         val supportedCodecs = mutableSetOf<String>()
         
+        // Always add SBC - mandatory for all A2DP devices
+        supportedCodecs.add("SBC")
+        
         try {
-            // Method 1: Try to get codecs from A2DP profile
-            a2dpProfile?.let { profile ->
-                try {
-                    // Get supported codecs using reflection
-                    val method = profile.javaClass.getDeclaredMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
-                    method.isAccessible = true
-                    val codecStatus = method.invoke(profile, device)
-                    
-                    codecStatus?.let { status ->
-                        // Parse codec status to extract supported codecs
-                        val statusStr = status.toString()
-                        if (statusStr.contains("SBC", ignoreCase = true)) supportedCodecs.add("SBC")
-                        if (statusStr.contains("AAC", ignoreCase = true)) supportedCodecs.add("AAC")
-                        if (statusStr.contains("aptX", ignoreCase = true)) supportedCodecs.add("aptX")
-                        if (statusStr.contains("aptX HD", ignoreCase = true)) supportedCodecs.add("aptX HD")
-                        if (statusStr.contains("LDAC", ignoreCase = true)) supportedCodecs.add("LDAC")
-                        if (statusStr.contains("LC3", ignoreCase = true)) supportedCodecs.add("LC3")
-                    }
-                } catch (e: Exception) {
-                    // Method failed, continue
-                }
+            // Try to get actual codec capabilities from device
+            val actualCodecs = getActualCodecCapabilities(device)
+            if (actualCodecs.isNotEmpty()) {
+                supportedCodecs.addAll(actualCodecs)
+                return supportedCodecs.toList().sorted()
             }
             
-            // Method 2: Parse logcat for actual codec negotiation
-            try {
-                val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-t", "200", "*:S", "BluetoothA2dp:V", "bt_a2dp:V", "A2dpService:V"))
-                val output = process.inputStream.bufferedReader().use { it.readText() }
-                
-                val deviceAddress = device.address.replace(":", "")
-                val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
-                val lines = output.lines()
-                
-                for (line in lines) {
-                    if ((line.contains(deviceAddress, ignoreCase = true) || 
-                         (deviceName.isNotEmpty() && line.contains(deviceName, ignoreCase = true))) &&
-                        (line.contains("codec", ignoreCase = true) || line.contains("support", ignoreCase = true))) {
-                        
-                        if (line.contains("sbc", ignoreCase = true)) supportedCodecs.add("SBC")
-                        if (line.contains("aac", ignoreCase = true)) supportedCodecs.add("AAC")
-                        if (line.contains("aptx", ignoreCase = true) && !line.contains("aptx hd", ignoreCase = true)) supportedCodecs.add("aptX")
-                        if (line.contains("aptx hd", ignoreCase = true) || line.contains("aptx_hd", ignoreCase = true)) supportedCodecs.add("aptX HD")
-                        if (line.contains("ldac", ignoreCase = true)) supportedCodecs.add("LDAC")
-                        if (line.contains("lc3", ignoreCase = true)) supportedCodecs.add("LC3")
-                    }
-                }
-            } catch (e: Exception) {
-                // Log parsing failed
+            // Conservative fallback based on device name
+            val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
+            
+            // Add AAC for modern devices
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                supportedCodecs.add("AAC")
             }
             
-            // Method 3: Device-specific codec detection based on known models
-            try {
-                val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
-                
-                // Sony devices typically support LDAC
-                if (deviceName.contains("sony") || deviceName.contains("wh-") || deviceName.contains("wf-") || 
-                    deviceName.contains("wi-") || deviceName.contains("mdr-")) {
+            // Only add premium codecs for confirmed devices
+            when {
+                deviceName.contains("wh-1000x") || deviceName.contains("wf-1000x") -> {
                     supportedCodecs.add("LDAC")
-                    supportedCodecs.add("SBC")
-                    supportedCodecs.add("AAC")
                 }
-                
-                // Apple devices - optimized for AAC
-                else if (deviceName.contains("airpods") || deviceName.contains("beats")) {
-                    supportedCodecs.add("AAC")
-                    supportedCodecs.add("SBC")
+                deviceName.contains("momentum 4") -> {
+                    supportedCodecs.addAll(listOf("aptX", "aptX HD"))
                 }
-                
-                // Qualcomm aptX devices - be more conservative
-                else if (deviceName.contains("sennheiser") || deviceName.contains("audio-technica")) {
-                    supportedCodecs.add("aptX")
-                    // Only add HD for specific models
-                    if (deviceName.contains("hd") || deviceName.contains("momentum")) {
-                        supportedCodecs.add("aptX HD")
-                    }
-                    supportedCodecs.add("SBC")
-                    supportedCodecs.add("AAC")
+                deviceName.contains("airpods") -> {
+                    // AirPods are AAC-optimized, remove other codecs
+                    supportedCodecs.clear()
+                    supportedCodecs.addAll(listOf("SBC", "AAC"))
                 }
-                
-                // Bose devices - typically AAC focused
-                else if (deviceName.contains("bose")) {
-                    supportedCodecs.add("SBC")
-                    supportedCodecs.add("AAC")
-                    // Only newer Bose models support aptX
-                    if (deviceName.contains("quietcomfort 45") || deviceName.contains("700")) {
-                        supportedCodecs.add("aptX")
-                    }
-                }
-                
-                // Jabra devices - specific model support
-                else if (deviceName.contains("jabra", ignoreCase = true)) {
-                    when {
-                        // Elite series with aptX support
-                        deviceName.contains("elite 85", ignoreCase = true) ||
-                        deviceName.contains("elite 75", ignoreCase = true) ||
-                        deviceName.contains("elite 65", ignoreCase = true) -> {
-                            supportedCodecs.addAll(listOf("SBC", "AAC", "aptX"))
-                        }
-                        
-                        // Elite 4 Active - SBC and AAC only (no aptX HD)
-                        deviceName.contains("elite 4", ignoreCase = true) -> {
-                            supportedCodecs.addAll(listOf("SBC", "AAC"))
-                        }
-                        
-                        // Elite 3 - basic codecs
-                        deviceName.contains("elite 3", ignoreCase = true) -> {
-                            supportedCodecs.addAll(listOf("SBC", "AAC"))
-                        }
-                        
-                        // Evolve series (business headsets)
-                        deviceName.contains("evolve", ignoreCase = true) -> {
-                            supportedCodecs.addAll(listOf("SBC", "AAC"))
-                        }
-                        
-                        // Default Jabra support
-                        else -> {
-                            supportedCodecs.addAll(listOf("SBC", "AAC"))
-                        }
-                    }
-                }
-                
-                // Generic audio devices
-                else {
-                    supportedCodecs.add("SBC") // Always supported
-                    supportedCodecs.add("AAC") // Most common
-                }
-                
-            } catch (e: Exception) {
-                // Device name parsing failed
-            }
-            
-            // Fallback: If no codecs detected, add basic support
-            if (supportedCodecs.isEmpty()) {
-                supportedCodecs.add("SBC") // Always supported
-                supportedCodecs.add("AAC") // Most common
             }
             
         } catch (e: Exception) {
-            // Return basic codec support
-            supportedCodecs.add("SBC")
-            supportedCodecs.add("AAC")
+            // Keep only basic codecs on error
+            supportedCodecs.clear()
+            supportedCodecs.addAll(listOf("SBC", "AAC"))
         }
         
         return supportedCodecs.toList().sorted()
+    }
+
+    private fun getActualCodecCapabilities(device: android.bluetooth.BluetoothDevice): List<String> {
+        val codecs = mutableSetOf<String>()
+        
+        try {
+            a2dpProfile?.let { profile ->
+                // Try to get codec capabilities
+                val methods = arrayOf("getCodecCapabilities", "getSupportedCodecs", "getAvailableCodecs")
+                
+                for (methodName in methods) {
+                    try {
+                        val method = profile.javaClass.getDeclaredMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
+                        method.isAccessible = true
+                        val result = method.invoke(profile, device)
+                        
+                        result?.let { caps ->
+                            val capsString = caps.toString().lowercase()
+                            if (capsString.contains("sbc")) codecs.add("SBC")
+                            if (capsString.contains("aac")) codecs.add("AAC")
+                            if (capsString.contains("aptx_hd")) codecs.add("aptX HD")
+                            else if (capsString.contains("aptx")) codecs.add("aptX")
+                            if (capsString.contains("ldac")) codecs.add("LDAC")
+                            if (capsString.contains("lc3")) codecs.add("LC3")
+                            
+                            if (codecs.isNotEmpty()) return@let
+                        }
+                        
+                        if (codecs.isNotEmpty()) break
+                    } catch (e: Exception) {
+                        continue
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Failed to get actual capabilities
+        }
+        
+        return codecs.toList()
     }
     
     private fun getBatteryLevel(device: android.bluetooth.BluetoothDevice): Int? {

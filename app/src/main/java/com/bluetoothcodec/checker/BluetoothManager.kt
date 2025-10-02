@@ -270,18 +270,121 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun getCurrentCodec(device: android.bluetooth.BluetoothDevice): String {
         return try {
-            // Method 1: Real-time logcat parsing for active codec
-            getRealTimeCodecFromLogs(device) ?:
-            // Method 2: AudioManager codec status
-            getCodecFromAudioManager() ?:
-            // Method 3: A2DP reflection with real connection state
-            getActiveCodecFromA2DP(device) ?:
-            // Method 4: System properties for current codec
-            getCurrentCodecFromSystemProps() ?:
+            // Method 1: Direct A2DP codec status (most accurate)
+            getDirectCodecFromA2DP(device) ?:
+            // Method 2: Bluetooth codec configuration
+            getCodecFromBluetoothConfig(device) ?:
+            // Method 3: Audio focus and routing
+            getCodecFromAudioRouting() ?:
             // Fallback
             BluetoothCodecs.SBC
         } catch (e: Exception) {
             BluetoothCodecs.SBC
+        }
+    }
+
+    private fun getDirectCodecFromA2DP(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            if (a2dpProfile == null) return null
+            
+            // Get the actual codec configuration using reflection
+            val codecStatusMethod = a2dpProfile?.javaClass?.getMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
+            codecStatusMethod?.let { method ->
+                val codecStatus = method.invoke(a2dpProfile, device)
+                codecStatus?.let { status ->
+                    // Try to get codec config from the status object
+                    val getCodecConfigMethod = status.javaClass.getMethod("getCodecConfig")
+                    val codecConfig = getCodecConfigMethod.invoke(status)
+                    
+                    codecConfig?.let { config ->
+                        val getCodecTypeMethod = config.javaClass.getMethod("getCodecType")
+                        val codecType = getCodecTypeMethod.invoke(config) as? Int
+                        
+                        return when (codecType) {
+                            0 -> BluetoothCodecs.SBC
+                            1 -> BluetoothCodecs.AAC
+                            2 -> BluetoothCodecs.APTX
+                            3 -> BluetoothCodecs.APTX_HD
+                            4 -> BluetoothCodecs.LDAC
+                            5 -> BluetoothCodecs.APTX_ADAPTIVE
+                            10 -> BluetoothCodecs.LC3
+                            else -> null
+                        }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getCodecFromBluetoothConfig(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            // Try to access BluetoothCodecConfig directly
+            val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+            val method = bluetoothAdapter.javaClass.getMethod("getActiveCodec", android.bluetooth.BluetoothDevice::class.java)
+            val result = method.invoke(bluetoothAdapter, device)
+            
+            result?.toString()?.let { codecString ->
+                when {
+                    codecString.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
+                    codecString.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
+                    codecString.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
+                    codecString.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
+                    codecString.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
+                    codecString.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
+                    codecString.contains("SBC", ignoreCase = true) -> BluetoothCodecs.SBC
+                    else -> null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getCodecFromAudioRouting(): String? {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            
+            // Check current audio routing
+            if (audioManager.isBluetoothA2dpOn) {
+                // Try to get codec from audio parameters
+                val codecParam = audioManager.getParameters("bt_a2dp_codec_type")
+                if (codecParam.isNotEmpty()) {
+                    return when (codecParam.lowercase()) {
+                        "0", "sbc" -> BluetoothCodecs.SBC
+                        "1", "aac" -> BluetoothCodecs.AAC
+                        "2", "aptx" -> BluetoothCodecs.APTX
+                        "3", "aptx_hd" -> BluetoothCodecs.APTX_HD
+                        "4", "ldac" -> BluetoothCodecs.LDAC
+                        "5", "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
+                        "10", "lc3" -> BluetoothCodecs.LC3
+                        else -> null
+                    }
+                }
+                
+                // Alternative parameter names
+                val altParams = listOf("bt_codec", "bluetooth_codec", "a2dp_codec")
+                for (param in altParams) {
+                    val value = audioManager.getParameters(param)
+                    if (value.isNotEmpty()) {
+                        return when {
+                            value.contains("ldac", ignoreCase = true) -> BluetoothCodecs.LDAC
+                            value.contains("aptx_adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
+                            value.contains("aptx_hd", ignoreCase = true) -> BluetoothCodecs.APTX_HD
+                            value.contains("aptx", ignoreCase = true) -> BluetoothCodecs.APTX
+                            value.contains("aac", ignoreCase = true) -> BluetoothCodecs.AAC
+                            value.contains("lc3", ignoreCase = true) -> BluetoothCodecs.LC3
+                            value.contains("sbc", ignoreCase = true) -> BluetoothCodecs.SBC
+                            else -> null
+                        }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
         }
     }
 

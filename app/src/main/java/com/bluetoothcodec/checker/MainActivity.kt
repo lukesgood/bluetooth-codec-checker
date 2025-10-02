@@ -859,9 +859,11 @@ fun getDeviceTypeInfo(deviceName: String?): String {
         // Apple devices
         name.contains("airpods") -> {
             when {
+                name.contains("pro") && (name.contains("3") || name.contains("usb-c")) -> "AirPods Pro (3rd Gen) • USB-C • Spatial Audio"
                 name.contains("pro") && name.contains("2") -> "AirPods Pro (2nd Gen) • Spatial Audio"
                 name.contains("pro") -> "AirPods Pro • Noise Canceling"
                 name.contains("max") -> "AirPods Max • Over-Ear Premium"
+                name.contains("4") -> "AirPods (4th Gen) • Latest"
                 name.contains("3") -> "AirPods (3rd Gen) • Spatial Audio"
                 name.contains("2") -> "AirPods (2nd Gen) • Classic"
                 else -> "AirPods • True Wireless"
@@ -872,8 +874,9 @@ fun getDeviceTypeInfo(deviceName: String?): String {
         name.contains("beats") -> {
             when {
                 name.contains("studio3") || name.contains("studio 3") -> "Beats Studio3 • Noise Canceling"
-                name.contains("studio buds +") -> "Beats Studio Buds+ • True Wireless Pro"
+                name.contains("studio buds +") || name.contains("studio buds plus") -> "Beats Studio Buds+ • True Wireless Pro"
                 name.contains("studio buds") -> "Beats Studio Buds • True Wireless"
+                name.contains("solo4") || name.contains("solo 4") -> "Beats Solo4 • Latest On-Ear"
                 name.contains("solo3") || name.contains("solo 3") -> "Beats Solo3 • On-Ear Wireless"
                 name.contains("solo pro") -> "Beats Solo Pro • Noise Canceling"
                 name.contains("fit pro") -> "Beats Fit Pro • Sports True Wireless"

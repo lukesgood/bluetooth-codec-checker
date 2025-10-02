@@ -68,22 +68,31 @@ class BluetoothCodecManager(private val context: Context) {
             supportedCodecs.add(BluetoothCodecs.AAC)
         }
         
-        // Check for aptX support (Qualcomm chipsets)
-        if (isCodecSupported("aptX")) {
-            supportedCodecs.add(BluetoothCodecs.APTX)
-            // If aptX is supported, likely aptX HD and Adaptive are too
-            supportedCodecs.add(BluetoothCodecs.APTX_HD)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                supportedCodecs.add(BluetoothCodecs.APTX_ADAPTIVE)
+        // Check for aptX support (Qualcomm chipsets only)
+        val chipsetName = getChipsetName().lowercase()
+        if (chipsetName.contains("snapdragon") || chipsetName.contains("qualcomm")) {
+            if (isCodecSupported("aptX")) {
+                supportedCodecs.add(BluetoothCodecs.APTX)
+                // Only add HD if explicitly supported
+                if (isCodecSupported("aptX HD")) {
+                    supportedCodecs.add(BluetoothCodecs.APTX_HD)
+                }
+                // aptX Adaptive only on newer Snapdragon chips
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && 
+                    (chipsetName.contains("8") || chipsetName.contains("7"))) {
+                    supportedCodecs.add(BluetoothCodecs.APTX_ADAPTIVE)
+                }
             }
         }
         
-        // Check for LDAC support (Sony devices and some others)
-        if (isCodecSupported("LDAC") || checkLdacSupport()) {
+        // Check for LDAC support (mainly Sony devices and some flagships)
+        val manufacturer = getSystemProperty("ro.product.manufacturer")?.lowercase() ?: ""
+        if (manufacturer.contains("sony") || 
+            (isCodecSupported("LDAC") && checkLdacSupport())) {
             supportedCodecs.add(BluetoothCodecs.LDAC)
         }
         
-        // Check for LC3 support (Bluetooth LE Audio)
+        // Check for LC3 support (Bluetooth LE Audio - Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             supportedCodecs.add(BluetoothCodecs.LC3)
         }
@@ -1202,13 +1211,25 @@ class BluetoothCodecManager(private val context: Context) {
                     supportedCodecs.add("SBC")
                 }
                 
-                // Qualcomm aptX devices
-                else if (deviceName.contains("aptx") || deviceName.contains("sennheiser") || 
-                         deviceName.contains("audio-technica") || deviceName.contains("bose")) {
+                // Qualcomm aptX devices - be more conservative
+                else if (deviceName.contains("sennheiser") || deviceName.contains("audio-technica")) {
                     supportedCodecs.add("aptX")
-                    if (deviceName.contains("hd") || deviceName.contains("momentum")) supportedCodecs.add("aptX HD")
+                    // Only add HD for specific models
+                    if (deviceName.contains("hd") || deviceName.contains("momentum")) {
+                        supportedCodecs.add("aptX HD")
+                    }
                     supportedCodecs.add("SBC")
                     supportedCodecs.add("AAC")
+                }
+                
+                // Bose devices - typically AAC focused
+                else if (deviceName.contains("bose")) {
+                    supportedCodecs.add("SBC")
+                    supportedCodecs.add("AAC")
+                    // Only newer Bose models support aptX
+                    if (deviceName.contains("quietcomfort 45") || deviceName.contains("700")) {
+                        supportedCodecs.add("aptX")
+                    }
                 }
                 
                 // Jabra devices - specific model support

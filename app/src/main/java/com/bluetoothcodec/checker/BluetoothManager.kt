@@ -551,6 +551,8 @@ class BluetoothCodecManager(private val context: Context) {
             when {
                 deviceName.contains("sony") && deviceName.contains("wh-") -> BluetoothCodecs.LDAC
                 deviceName.contains("sony") && deviceName.contains("wf-") -> BluetoothCodecs.LDAC
+                deviceName.contains("airpods") -> BluetoothCodecs.AAC // Apple devices prefer AAC
+                deviceName.contains("beats") -> BluetoothCodecs.AAC // Beats (Apple-owned) prefer AAC
                 deviceName.contains("bose") && isQualcommDevice() -> BluetoothCodecs.APTX
                 deviceName.contains("sennheiser") && isQualcommDevice() -> BluetoothCodecs.APTX
                 isQualcommDevice() -> BluetoothCodecs.APTX
@@ -835,6 +837,12 @@ class BluetoothCodecManager(private val context: Context) {
                     supportedCodecs.add("LDAC")
                     supportedCodecs.add("SBC")
                     supportedCodecs.add("AAC")
+                }
+                
+                // Apple devices - optimized for AAC
+                else if (deviceName.contains("airpods") || deviceName.contains("beats")) {
+                    supportedCodecs.add("AAC")
+                    supportedCodecs.add("SBC")
                 }
                 
                 // Qualcomm aptX devices

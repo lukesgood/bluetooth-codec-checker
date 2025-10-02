@@ -30,8 +30,29 @@ object DeviceCodecDatabase {
         
         // Apple
         "airpods pro" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "airpods pro 2" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "airpods pro (2nd generation)" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
         "airpods max" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "airpods (3rd generation)" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "airpods (2nd generation)" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "airpods (1st generation)" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "airpods 3" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "airpods 2" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
         "airpods" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        
+        // Beats (Apple-owned)
+        "beats studio3" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats studio 3" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats solo3" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats solo 3" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats solo pro" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats studio buds" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats studio buds +" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats fit pro" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats powerbeats pro" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats powerbeats3" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beats x" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
+        "beatsx" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC),
         
         // Samsung
         "galaxy buds pro" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),

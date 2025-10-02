@@ -859,19 +859,28 @@ fun getDeviceTypeInfo(deviceName: String?): String {
         // Apple devices
         name.contains("airpods") -> {
             when {
-                name.contains("pro") -> "True Wireless Earbuds • Noise Canceling"
-                name.contains("max") -> "Wireless Headphones • Premium"
-                else -> "True Wireless Earbuds"
+                name.contains("pro") && name.contains("2") -> "AirPods Pro (2nd Gen) • Spatial Audio"
+                name.contains("pro") -> "AirPods Pro • Noise Canceling"
+                name.contains("max") -> "AirPods Max • Over-Ear Premium"
+                name.contains("3") -> "AirPods (3rd Gen) • Spatial Audio"
+                name.contains("2") -> "AirPods (2nd Gen) • Classic"
+                else -> "AirPods • True Wireless"
             }
         }
         
-        // Beats devices
+        // Beats devices (Apple-owned)
         name.contains("beats") -> {
             when {
-                name.contains("studio") -> "Wireless Headphones • Studio Quality"
-                name.contains("solo") -> "On-Ear Headphones"
-                name.contains("powerbeats") -> "Sports Earphones"
-                else -> "Beats Audio Device"
+                name.contains("studio3") || name.contains("studio 3") -> "Beats Studio3 • Noise Canceling"
+                name.contains("studio buds +") -> "Beats Studio Buds+ • True Wireless Pro"
+                name.contains("studio buds") -> "Beats Studio Buds • True Wireless"
+                name.contains("solo3") || name.contains("solo 3") -> "Beats Solo3 • On-Ear Wireless"
+                name.contains("solo pro") -> "Beats Solo Pro • Noise Canceling"
+                name.contains("fit pro") -> "Beats Fit Pro • Sports True Wireless"
+                name.contains("powerbeats pro") -> "Beats Powerbeats Pro • Sports True Wireless"
+                name.contains("powerbeats3") -> "Beats Powerbeats3 • Sports Wireless"
+                name.contains("beatsx") || name.contains("beats x") -> "BeatsX • Neckband Wireless"
+                else -> "Beats Audio Device • Apple"
             }
         }
         

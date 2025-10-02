@@ -60,15 +60,10 @@ class BluetoothCodecManager(private val context: Context) {
     fun getChipsetInfo(): ChipsetInfo {
         val supportedCodecs = mutableListOf<String>()
         
-        // Only add codecs we can verify
-        supportedCodecs.add(BluetoothCodecs.SBC) // Always supported
+        // Only add SBC - the only codec guaranteed on all Bluetooth devices
+        supportedCodecs.add(BluetoothCodecs.SBC)
         
-        // AAC - only on Android 8+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            supportedCodecs.add(BluetoothCodecs.AAC)
-        }
-        
-        // Don't assume any premium codecs unless we can verify them
+        // Don't assume any other codecs unless we can actually verify them
         
         return ChipsetInfo(
             name = getChipsetName(),
@@ -1222,89 +1217,10 @@ class BluetoothCodecManager(private val context: Context) {
     }
 
     private fun getDeviceSupportedCodecs(device: android.bluetooth.BluetoothDevice): List<String> {
-        val supportedCodecs = mutableSetOf<String>()
-        
-        // Always add SBC - mandatory for all A2DP devices
-        supportedCodecs.add("SBC")
-        
-        try {
-            // Try to get actual codec capabilities from device
-            val actualCodecs = getActualCodecCapabilities(device)
-            if (actualCodecs.isNotEmpty()) {
-                supportedCodecs.addAll(actualCodecs)
-                return supportedCodecs.toList().sorted()
-            }
-            
-            // Conservative fallback based on device name
-            val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
-            
-            // Add AAC for modern devices
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                supportedCodecs.add("AAC")
-            }
-            
-            // Only add premium codecs for confirmed devices
-            when {
-                deviceName.contains("wh-1000x") || deviceName.contains("wf-1000x") -> {
-                    supportedCodecs.add("LDAC")
-                }
-                deviceName.contains("momentum 4") -> {
-                    supportedCodecs.addAll(listOf("aptX", "aptX HD"))
-                }
-                deviceName.contains("airpods") -> {
-                    // AirPods are AAC-optimized, remove other codecs
-                    supportedCodecs.clear()
-                    supportedCodecs.addAll(listOf("SBC", "AAC"))
-                }
-            }
-            
-        } catch (e: Exception) {
-            // Keep only basic codecs on error
-            supportedCodecs.clear()
-            supportedCodecs.addAll(listOf("SBC", "AAC"))
-        }
-        
-        return supportedCodecs.toList().sorted()
+        // Only return SBC - the only codec guaranteed for all Bluetooth A2DP devices
+        return listOf("SBC")
     }
-
-    private fun getActualCodecCapabilities(device: android.bluetooth.BluetoothDevice): List<String> {
-        val codecs = mutableSetOf<String>()
-        
-        try {
-            a2dpProfile?.let { profile ->
-                // Try to get codec capabilities
-                val methods = arrayOf("getCodecCapabilities", "getSupportedCodecs", "getAvailableCodecs")
-                
-                for (methodName in methods) {
-                    try {
-                        val method = profile.javaClass.getDeclaredMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
-                        method.isAccessible = true
-                        val result = method.invoke(profile, device)
-                        
-                        result?.let { caps ->
-                            val capsString = caps.toString().lowercase()
-                            if (capsString.contains("sbc")) codecs.add("SBC")
-                            if (capsString.contains("aac")) codecs.add("AAC")
-                            if (capsString.contains("aptx_hd")) codecs.add("aptX HD")
-                            else if (capsString.contains("aptx")) codecs.add("aptX")
-                            if (capsString.contains("ldac")) codecs.add("LDAC")
-                            if (capsString.contains("lc3")) codecs.add("LC3")
-                            
-                            if (codecs.isNotEmpty()) return@let
-                        }
-                        
-                        if (codecs.isNotEmpty()) break
-                    } catch (e: Exception) {
-                        continue
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // Failed to get actual capabilities
-        }
-        
-        return codecs.toList()
-    }
+            
     
     private fun getBatteryLevel(device: android.bluetooth.BluetoothDevice): Int? {
         return try {

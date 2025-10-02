@@ -93,14 +93,6 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
         if (!hasPermission) {
             PermissionCard(onRequestPermissions)
         } else {
-            // Header
-            Text(
-                text = "Bluetooth Codec Checker",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
-            )
-            
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

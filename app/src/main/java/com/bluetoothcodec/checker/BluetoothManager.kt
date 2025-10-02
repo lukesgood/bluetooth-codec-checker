@@ -104,30 +104,36 @@ class BluetoothCodecManager(private val context: Context) {
         val devices = mutableListOf<BluetoothDevice>()
         
         try {
-            // Method 1: Check AudioManager for connected devices
+            // Method 1: Check AudioManager for actively connected A2DP devices
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            
-            for (audioDevice in audioDevices) {
-                if (audioDevice.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
-                    // Find corresponding Bluetooth device
-                    bluetoothAdapter.bondedDevices?.forEach { btDevice ->
-                        try {
-                            if (hasBluetoothPermission() && btDevice.name == audioDevice.productName.toString()) {
-                                devices.add(
-                                    BluetoothDevice(
-                                        name = btDevice.name ?: "Unknown Device",
-                                        address = btDevice.address,
-                                        isConnected = true,
-                                        activeCodec = getCurrentCodec(btDevice),
-                                        supportedCodecs = getDeviceSupportedCodecs(btDevice),
-                                        batteryLevel = getBatteryLevel(btDevice),
-                                        signalStrength = getSignalStrength(btDevice)
-                                    )
-                                )
+            if (audioManager.isBluetoothA2dpOn) {
+                val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                
+                for (audioDevice in audioDevices) {
+                    if (audioDevice.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
+                        // Find corresponding Bluetooth device
+                        bluetoothAdapter.bondedDevices?.forEach { btDevice ->
+                            try {
+                                if (hasBluetoothPermission() && btDevice.name == audioDevice.productName.toString()) {
+                                    // Verify it's actually connected via A2DP
+                                    val a2dpState = a2dpProfile?.getConnectionState(btDevice) ?: BluetoothProfile.STATE_DISCONNECTED
+                                    if (a2dpState == BluetoothProfile.STATE_CONNECTED) {
+                                        devices.add(
+                                            BluetoothDevice(
+                                                name = btDevice.name ?: "Unknown Device",
+                                                address = btDevice.address,
+                                                isConnected = true,
+                                                activeCodec = getCurrentCodec(btDevice),
+                                                supportedCodecs = getDeviceSupportedCodecs(btDevice),
+                                                batteryLevel = getBatteryLevel(btDevice),
+                                                signalStrength = getSignalStrength(btDevice)
+                                            )
+                                        )
+                                    }
+                                }
+                            } catch (e: SecurityException) {
+                                // Skip this device
                             }
-                        } catch (e: SecurityException) {
-                            // Skip this device
                         }
                     }
                 }
@@ -136,83 +142,28 @@ class BluetoothCodecManager(private val context: Context) {
             // Method 2: Ensure profiles are connected and get devices
             ensureProfilesConnected()
             
-            // Method 3: Get connected A2DP devices
+            // Method 3: Get connected A2DP devices (only if not already found)
             a2dpProfile?.connectedDevices?.forEach { device ->
                 try {
                     if (hasBluetoothPermission() && !devices.any { it.address == device.address }) {
-                        devices.add(
-                            BluetoothDevice(
-                                name = device.name ?: "Unknown Device",
-                                address = device.address,
-                                isConnected = true,
-                                activeCodec = getCurrentCodec(device),
-                                supportedCodecs = getDeviceSupportedCodecs(device),
-                                batteryLevel = getBatteryLevel(device),
-                                signalStrength = getSignalStrength(device)
+                        // Double-check connection state
+                        val connectionState = a2dpProfile?.getConnectionState(device)
+                        if (connectionState == BluetoothProfile.STATE_CONNECTED) {
+                            devices.add(
+                                BluetoothDevice(
+                                    name = device.name ?: "Unknown Device",
+                                    address = device.address,
+                                    isConnected = true,
+                                    activeCodec = getCurrentCodec(device),
+                                    supportedCodecs = getDeviceSupportedCodecs(device),
+                                    batteryLevel = getBatteryLevel(device),
+                                    signalStrength = getSignalStrength(device)
+                                )
                             )
-                        )
-                    }
-                } catch (e: SecurityException) {
-                    // Skip this device
-                }
-            }
-            
-            // Method 4: Get connected Headset devices (avoid duplicates)
-            headsetProfile?.connectedDevices?.forEach { device ->
-                try {
-                    if (hasBluetoothPermission() && !devices.any { it.address == device.address }) {
-                        devices.add(
-                            BluetoothDevice(
-                                name = device.name ?: "Unknown Device",
-                                address = device.address,
-                                isConnected = true,
-                                activeCodec = getCurrentCodec(device),
-                                supportedCodecs = getDeviceSupportedCodecs(device),
-                                batteryLevel = getBatteryLevel(device),
-                                signalStrength = getSignalStrength(device)
-                            )
-                        )
-                    }
-                } catch (e: SecurityException) {
-                    // Skip this device
-                }
-            }
-            
-            // Method 5: Check bonded devices for actual connection state
-            if (devices.isEmpty()) {
-                bluetoothAdapter.bondedDevices?.forEach { device ->
-                    try {
-                        if (!hasBluetoothPermission()) return@forEach
-                        
-                        val deviceClass = device.bluetoothClass?.majorDeviceClass
-                        val isAudioDevice = deviceClass == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO
-                        
-                        if (isAudioDevice) {
-                            // Check if actually connected
-                            val a2dpState = a2dpProfile?.getConnectionState(device) ?: BluetoothProfile.STATE_DISCONNECTED
-                            val headsetState = headsetProfile?.getConnectionState(device) ?: BluetoothProfile.STATE_DISCONNECTED
-                            
-                            if (a2dpState == BluetoothProfile.STATE_CONNECTED || 
-                                headsetState == BluetoothProfile.STATE_CONNECTED) {
-                                
-                                if (!devices.any { it.address == device.address }) {
-                                    devices.add(
-                                        BluetoothDevice(
-                                            name = device.name ?: "Unknown Device",
-                                            address = device.address,
-                                            isConnected = true,
-                                            activeCodec = getCurrentCodec(device),
-                                            supportedCodecs = getDeviceSupportedCodecs(device),
-                                            batteryLevel = getBatteryLevel(device),
-                                            signalStrength = getSignalStrength(device)
-                                        )
-                                    )
-                                }
-                            }
                         }
-                    } catch (e: SecurityException) {
-                        // Skip this device
                     }
+                } catch (e: SecurityException) {
+                    // Skip this device
                 }
             }
             
@@ -319,20 +270,143 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun getCurrentCodec(device: android.bluetooth.BluetoothDevice): String {
         return try {
-            // Method 1: Get actual active codec from A2DP connection
-            getActiveCodecFromConnection(device) ?:
-            // Method 2: Check current audio stream properties
-            getCodecFromActiveAudioStream() ?:
-            // Method 3: Parse HCI logs for codec negotiation
-            getCodecFromHciLogs() ?:
-            // Method 4: Developer options (if enabled)
-            (if (isDeveloperOptionsEnabled()) getDeveloperOptionsCodec() else null) ?:
-            // Method 5: Estimate from device capabilities
-            estimateCodecFromDevice(device) ?:
+            // Method 1: Real-time logcat parsing for active codec
+            getRealTimeCodecFromLogs(device) ?:
+            // Method 2: AudioManager codec status
+            getCodecFromAudioManager() ?:
+            // Method 3: A2DP reflection with real connection state
+            getActiveCodecFromA2DP(device) ?:
+            // Method 4: System properties for current codec
+            getCurrentCodecFromSystemProps() ?:
             // Fallback
             BluetoothCodecs.SBC
         } catch (e: Exception) {
             BluetoothCodecs.SBC
+        }
+    }
+
+    private fun getRealTimeCodecFromLogs(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            val deviceAddress = device.address.replace(":", "")
+            val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-t", "20", "*:S", 
+                "BluetoothA2dpService:V", "bt_btif:V", "bt_a2dp:V", "AudioManager:V"))
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            
+            val lines = output.lines().reversed() // Most recent first
+            
+            for (line in lines) {
+                if (line.contains(deviceAddress, ignoreCase = true) || 
+                    (hasBluetoothPermission() && device.name?.let { line.contains(it, ignoreCase = true) } == true)) {
+                    
+                    when {
+                        line.contains("LDAC") && line.contains("active", ignoreCase = true) -> return BluetoothCodecs.LDAC
+                        line.contains("aptX Adaptive") && line.contains("active", ignoreCase = true) -> return BluetoothCodecs.APTX_ADAPTIVE
+                        line.contains("aptX HD") && line.contains("active", ignoreCase = true) -> return BluetoothCodecs.APTX_HD
+                        line.contains("aptX") && line.contains("active", ignoreCase = true) -> return BluetoothCodecs.APTX
+                        line.contains("AAC") && line.contains("active", ignoreCase = true) -> return BluetoothCodecs.AAC
+                        line.contains("LC3") && line.contains("active", ignoreCase = true) -> return BluetoothCodecs.LC3
+                        line.contains("SBC") && line.contains("active", ignoreCase = true) -> return BluetoothCodecs.SBC
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getCodecFromAudioManager(): String? {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            
+            // Check if A2DP is active
+            if (audioManager.isBluetoothA2dpOn) {
+                // Try to get codec info from audio parameters
+                val parameters = audioManager.getParameters("A2dpSuspended")
+                if (parameters == "false") {
+                    // A2DP is active, try to get codec
+                    val codecParam = audioManager.getParameters("bt_a2dp_codec")
+                    return when {
+                        codecParam.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
+                        codecParam.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
+                        codecParam.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
+                        codecParam.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
+                        codecParam.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
+                        codecParam.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
+                        else -> null
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getActiveCodecFromA2DP(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            if (a2dpProfile == null) return null
+            
+            // Check if device is actually connected
+            val connectionState = a2dpProfile?.getConnectionState(device)
+            if (connectionState != BluetoothProfile.STATE_CONNECTED) return null
+            
+            // Try reflection to get codec status
+            val methods = arrayOf("getCodecStatus", "getCurrentCodecConfig", "getActiveCodec")
+            
+            for (methodName in methods) {
+                try {
+                    val method = a2dpProfile?.javaClass?.getDeclaredMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
+                    method?.isAccessible = true
+                    val result = method?.invoke(a2dpProfile, device)
+                    
+                    result?.let { codecResult ->
+                        val codecString = codecResult.toString()
+                        return when {
+                            codecString.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
+                            codecString.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
+                            codecString.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
+                            codecString.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
+                            codecString.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
+                            codecString.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
+                            codecString.contains("SBC", ignoreCase = true) -> BluetoothCodecs.SBC
+                            else -> null
+                        }
+                    }
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getCurrentCodecFromSystemProps(): String? {
+        return try {
+            val codecProp = getSystemProperty("persist.vendor.bt.a2dp.codec")
+            return when (codecProp?.lowercase()) {
+                "ldac" -> BluetoothCodecs.LDAC
+                "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
+                "aptx_hd" -> BluetoothCodecs.APTX_HD
+                "aptx" -> BluetoothCodecs.APTX
+                "aac" -> BluetoothCodecs.AAC
+                "lc3" -> BluetoothCodecs.LC3
+                "sbc" -> BluetoothCodecs.SBC
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun isA2dpActivelyStreaming(): Boolean {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.isBluetoothA2dpOn && audioManager.isMusicActive
+        } catch (e: Exception) {
+            false
         }
     }
 
@@ -705,35 +779,6 @@ class BluetoothCodecManager(private val context: Context) {
             
             for (prop in props) {
                 val value = getSystemProperty(prop)
-                if (value.isNotEmpty()) {
-                    return when {
-                        value.contains("ldac", ignoreCase = true) -> BluetoothCodecs.LDAC
-                        value.contains("aptx", ignoreCase = true) -> BluetoothCodecs.APTX
-                        value.contains("aac", ignoreCase = true) -> BluetoothCodecs.AAC
-                        else -> continue
-                    }
-                }
-            }
-            null
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun getCodecFromAudioManager(): String? {
-        return try {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            
-            val params = listOf(
-                "bluetooth_enabled",
-                "A2dpSuspended",
-                "bluetooth_a2dp",
-                "bt_samplerate",
-                "bt_format"
-            )
-            
-            for (param in params) {
-                val value = audioManager.getParameters(param)
                 if (value.isNotEmpty()) {
                     return when {
                         value.contains("ldac", ignoreCase = true) -> BluetoothCodecs.LDAC

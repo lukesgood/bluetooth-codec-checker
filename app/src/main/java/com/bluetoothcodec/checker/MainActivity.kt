@@ -76,8 +76,6 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
     val chipsetInfo by viewModel.chipsetInfo
     val isSearching by viewModel.isSearching
     
-    var isRefreshing by remember { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
         viewModel.refreshData()
         // Auto-refresh every 5 seconds
@@ -85,14 +83,6 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
             kotlinx.coroutines.delay(5000)
             viewModel.refreshData()
         }
-    }
-    
-    // Manual refresh function
-    val onRefresh: () -> Unit = {
-        isRefreshing = true
-        viewModel.refreshData()
-        // Reset refresh state immediately
-        isRefreshing = false
     }
 
     Column(
@@ -103,34 +93,13 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
         if (!hasPermission) {
             PermissionCard(onRequestPermissions)
         } else {
-            // Refresh button at top
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Bluetooth Codec Checker",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                IconButton(
-                    onClick = onRefresh,
-                    enabled = !isRefreshing
-                ) {
-                    if (isRefreshing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("🔄", fontSize = 20.sp)
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
+            // Header
+            Text(
+                text = "Bluetooth Codec Checker",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp)
+            )
             
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -196,7 +165,7 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
                                     fontSize = 16.sp
                                 )
                                 Text(
-                                    text = "Tap 🔄 to refresh or connect a Bluetooth headset",
+                                    text = "Connect a Bluetooth headset to see codec information",
                                     fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

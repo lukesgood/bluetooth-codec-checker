@@ -17,7 +17,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("../bcc-new-key.keystore")
+            storeFile = file("../bcc-release.keystore")
             storePassword = "android"
             keyAlias = "bcc"
             keyPassword = "android"
@@ -27,6 +27,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

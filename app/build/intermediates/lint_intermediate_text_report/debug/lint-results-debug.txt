@@ -1,0 +1,185 @@
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:466: Error: Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with checkPermission) or explicitly handle a potential SecurityException [MissingPermission]
+            val deviceName = device.name?.lowercase() ?: ""
+                             ~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:726: Error: Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with checkPermission) or explicitly handle a potential SecurityException [MissingPermission]
+                val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
+                                                               ~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:748: Error: Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with checkPermission) or explicitly handle a potential SecurityException [MissingPermission]
+                val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
+                                                               ~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:860: Error: Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with checkPermission) or explicitly handle a potential SecurityException [MissingPermission]
+                val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
+                                                               ~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:1051: Error: Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with checkPermission) or explicitly handle a potential SecurityException [MissingPermission]
+                val deviceName = if (hasBluetoothPermission()) device.name?.lowercase() ?: "" else ""
+                                                               ~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:1087: Error: Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with checkPermission) or explicitly handle a potential SecurityException [MissingPermission]
+                val a2dpState = a2dpProfile?.getConnectionState(device) ?: BluetoothProfile.STATE_DISCONNECTED
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "MissingPermission":
+   This check scans through your code and libraries and looks at the APIs
+   being used, and checks this against the set of permissions required to
+   access those APIs. If the code using those APIs is called at runtime, then
+   the program will crash.
+
+   Furthermore, for permissions that are revocable (with targetSdkVersion 23),
+   client code must also be prepared to handle the calls throwing an exception
+   if the user rejects the request for permission at runtime.
+
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:284: Warning: Reflective access to getActiveDevice, which is not part of the public SDK and therefore likely to change in future Android releases [DiscouragedPrivateApi]
+                val activeDeviceMethod = a2dpProfile?.javaClass?.getDeclaredMethod("getActiveDevice")
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:701: Warning: Reflective access to getCodecStatus, which is not part of the public SDK and therefore likely to change in future Android releases [DiscouragedPrivateApi]
+                    val method = profile.javaClass.getDeclaredMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "DiscouragedPrivateApi":
+   Usage of restricted non-SDK interface may throw an exception at runtime.
+   Accessing non-SDK methods or fields through reflection has a high
+   likelihood to break your app between versions, and is being restricted to
+   facilitate future app compatibility.
+
+   https://developer.android.com/preview/restrictions-non-sdk-interfaces
+
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:949: Warning: Field requires API level 28 (current min is 26): android.bluetooth.BluetoothProfile#HID_DEVICE [InlinedApi]
+            }, BluetoothProfile.HID_DEVICE)
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "InlinedApi":
+   This check scans through all the Android API field references in the
+   application and flags certain constants, such as static final integers and
+   Strings, which were introduced in later versions. These will actually be
+   copied into the class files rather than being referenced, which means that
+   the value is available even when running on older devices. In some cases
+   that's fine, and in other cases it can result in a runtime crash or
+   incorrect behavior. It depends on the context, so consider the code
+   carefully and decide whether it's safe and can be suppressed or whether the
+   code needs to be guarded.
+
+   If you really want to use this API and don't need to support older devices
+   just set the minSdkVersion in your build.gradle or AndroidManifest.xml
+   files.
+
+   If your code is deliberately accessing newer APIs, and you have ensured
+   (e.g. with conditional execution) that this code will only ever be called
+   on a supported platform, then you can annotate your class or method with
+   the @TargetApi annotation specifying the local minimum SDK to apply, such
+   as @TargetApi(11), such that this check considers 11 rather than your
+   manifest file's minimum SDK as the required API level.
+
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:201: Error: Field requires API level 31 (current min is 26): android.os.Build#SOC_MANUFACTURER [NewApi]
+            Build.SOC_MANUFACTURER.contains("qualcomm", ignoreCase = true) ||
+            ~~~~~~~~~~~~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:223: Error: Field requires API level 31 (current min is 26): android.os.Build#SOC_MANUFACTURER [NewApi]
+            Build.SOC_MANUFACTURER + " " + Build.SOC_MODEL
+            ~~~~~~~~~~~~~~~~~~~~~~
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:223: Error: Field requires API level 31 (current min is 26): android.os.Build#SOC_MODEL [NewApi]
+            Build.SOC_MANUFACTURER + " " + Build.SOC_MODEL
+                                           ~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "NewApi":
+   This check scans through all the Android API calls in the application and
+   warns about any calls that are not available on all versions targeted by
+   this application (according to its minimum SDK attribute in the manifest).
+
+   If you really want to use this API and don't need to support older devices
+   just set the minSdkVersion in your build.gradle or AndroidManifest.xml
+   files.
+
+   If your code is deliberately accessing newer APIs, and you have ensured
+   (e.g. with conditional execution) that this code will only ever be called
+   on a supported platform, then you can annotate your class or method with
+   the @TargetApi annotation specifying the local minimum SDK to apply, such
+   as @TargetApi(11), such that this check considers 11 rather than your
+   manifest file's minimum SDK as the required API level.
+
+   If you are deliberately setting android: attributes in style definitions,
+   make sure you place this in a values-vNN folder in order to avoid running
+   into runtime conflicts on certain devices where manufacturers have added
+   custom attributes whose ids conflict with the new ones on later platforms.
+
+   Similarly, you can use tools:targetApi="11" in an XML file to indicate that
+   the element will only be inflated in an adequate context.
+
+/home/luke/bcc/app/src/main/AndroidManifest.xml:28: Warning: Redundant label can be removed [RedundantLabel]
+            android:label="@string/app_name"
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "RedundantLabel":
+   When an activity does not have a label attribute, it will use the one from
+   the application tag. Since the application has already specified the same
+   label, the label on this activity can be omitted.
+
+/home/luke/bcc/app/build.gradle.kts:34: Warning: A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.17.0 [GradleDependency]
+    implementation("androidx.core:core-ktx:1.12.0")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/luke/bcc/app/build.gradle.kts:35: Warning: A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.7.0 is available: 2.9.4 [GradleDependency]
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/luke/bcc/app/build.gradle.kts:36: Warning: A newer version of androidx.activity:activity-compose than 1.8.2 is available: 1.11.0 [GradleDependency]
+    implementation("androidx.activity:activity-compose:1.8.2")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/luke/bcc/app/build.gradle.kts:41: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.7.0 is available: 2.9.4 [GradleDependency]
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/BluetoothManager.kt:65: Warning: Unnecessary; SDK_INT is always >= 26 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/luke/bcc/app/src/main/res/mipmap-anydpi-v26: Warning: This folder configuration (v26) is unnecessary; minSdkVersion is 26. Merge all the resources in this folder into mipmap-anydpi. [ObsoleteSdkInt]
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+/home/luke/bcc/app/src/main/java/com/bluetoothcodec/checker/MainViewModel.kt:15: Warning: This field leaks a context object [StaticFieldLeak]
+class MainViewModel(private val context: Context) : ViewModel() {
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "StaticFieldLeak":
+   A static field will leak contexts.
+
+   Non-static inner classes have an implicit reference to their outer class.
+   If that outer class is for example a Fragment or Activity, then this
+   reference means that the long-running handler/loader/task will hold a
+   reference to the activity which prevents it from getting garbage
+   collected.
+
+   Similarly, direct field references to activities and fragments from these
+   longer running instances can cause leaks.
+
+   ViewModel classes should never point to Views or non-application Contexts.
+
+/home/luke/bcc/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml:2: Warning: The application adaptive icon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+/home/luke/bcc/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml:2: Warning: The application adaptive roundIcon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+
+   Explanation for issues of type "MonochromeLauncherIcon":
+   If android:roundIcon and android:icon are both in your manifest, you must
+   either remove the reference to android:roundIcon if it is not needed; or,
+   supply the monochrome icon in the drawable defined by the android:roundIcon
+   and android:icon attribute.
+
+   For example, if android:roundIcon and android:icon are both in the
+   manifest, a launcher might choose to use android:roundIcon over
+   android:icon to display the adaptive app icon. Therefore, your themed
+   application iconwill not show if your monochrome attribute is not also
+   specified in android:roundIcon.
+
+9 errors, 13 warnings

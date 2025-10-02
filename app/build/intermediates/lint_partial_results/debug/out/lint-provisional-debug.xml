@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.1.2" type="conditional_incidents">
+
+    <incident
+        id="ObsoleteSdkInt"
+        severity="warning"
+        message="Unnecessary; SDK_INT is always >= 31">
+        <fix-replace
+            description="Delete tools:targetApi"
+            replacement="">
+            <range
+                file="${:app*debug*sourceProvider*0*manifest*0}"
+                startOffset="1221"
+                endOffset="1241"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*sourceProvider*0*manifest*0}"
+            line="24"
+            column="9"
+            startOffset="1221"
+            endLine="24"
+            endColumn="29"
+            endOffset="1241"/>
+        <map>
+            <condition minGE="ffffffffc0000000"/>
+        </map>
+    </incident>
+
+    <incident
+        id="NewApi"
+        severity="error"
+        message="">
+        <fix-data minSdk="fffffffffe000000" requiresApi="ffffffffc0000000"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="201"
+            column="13"
+            startOffset="8961"
+            endLine="201"
+            endColumn="35"
+            endOffset="8983"/>
+        <map>
+            <api-levels id="minSdk"
+                value="fffffffffe000000"/>
+            <api-levels id="requiresApi"
+                value="ffffffffc0000000"/>
+            <entry
+                name="message"
+                string="Field requires API level 31 (current min is %1$s): `android.os.Build#SOC_MANUFACTURER`"/>
+        </map>
+    </incident>
+
+    <incident
+        id="NewApi"
+        severity="error"
+        message="">
+        <fix-data minSdk="fffffffffe000000" requiresApi="ffffffffc0000000"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="223"
+            column="13"
+            startOffset="9764"
+            endLine="223"
+            endColumn="35"
+            endOffset="9786"/>
+        <map>
+            <api-levels id="minSdk"
+                value="fffffffffe000000"/>
+            <api-levels id="requiresApi"
+                value="ffffffffc0000000"/>
+            <entry
+                name="message"
+                string="Field requires API level 31 (current min is %1$s): `android.os.Build#SOC_MANUFACTURER`"/>
+        </map>
+    </incident>
+
+    <incident
+        id="NewApi"
+        severity="error"
+        message="">
+        <fix-data minSdk="fffffffffe000000" requiresApi="ffffffffc0000000"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="223"
+            column="44"
+            startOffset="9795"
+            endLine="223"
+            endColumn="59"
+            endOffset="9810"/>
+        <map>
+            <api-levels id="minSdk"
+                value="fffffffffe000000"/>
+            <api-levels id="requiresApi"
+                value="ffffffffc0000000"/>
+            <entry
+                name="message"
+                string="Field requires API level 31 (current min is %1$s): `android.os.Build#SOC_MODEL`"/>
+        </map>
+    </incident>
+
+    <incident
+        id="MissingPermission"
+        severity="error"
+        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`">
+        <fix-data missing="android.permission.BLUETOOTH_CONNECT" requirement="android.permission.BLUETOOTH_CONNECT"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="466"
+            column="30"
+            startOffset="19772"
+            endLine="466"
+            endColumn="41"
+            endOffset="19783"/>
+    </incident>
+
+    <incident
+        id="MissingPermission"
+        severity="error"
+        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`">
+        <fix-data missing="android.permission.BLUETOOTH_CONNECT" requirement="android.permission.BLUETOOTH_CONNECT"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="726"
+            column="64"
+            startOffset="30812"
+            endLine="726"
+            endColumn="75"
+            endOffset="30823"/>
+    </incident>
+
+    <incident
+        id="MissingPermission"
+        severity="error"
+        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`">
+        <fix-data missing="android.permission.BLUETOOTH_CONNECT" requirement="android.permission.BLUETOOTH_CONNECT"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="748"
+            column="64"
+            startOffset="32257"
+            endLine="748"
+            endColumn="75"
+            endOffset="32268"/>
+    </incident>
+
+    <incident
+        id="MissingPermission"
+        severity="error"
+        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`">
+        <fix-data missing="android.permission.BLUETOOTH_CONNECT" requirement="android.permission.BLUETOOTH_CONNECT"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="860"
+            column="64"
+            startOffset="37511"
+            endLine="860"
+            endColumn="75"
+            endOffset="37522"/>
+    </incident>
+
+    <incident
+        id="InlinedApi"
+        severity="warning"
+        message="">
+        <fix-data minSdk="fffffffffe000000" requiresApi="fffffffff8000000"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="949"
+            column="16"
+            startOffset="41597"
+            endLine="949"
+            endColumn="43"
+            endOffset="41624"/>
+        <map>
+            <api-levels id="minSdk"
+                value="fffffffffe000000"/>
+            <api-levels id="requiresApi"
+                value="fffffffff8000000"/>
+            <entry
+                name="message"
+                string="Field requires API level 28 (current min is %1$s): `android.bluetooth.BluetoothProfile#HID_DEVICE`"/>
+        </map>
+    </incident>
+
+    <incident
+        id="MissingPermission"
+        severity="error"
+        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`">
+        <fix-data missing="android.permission.BLUETOOTH_CONNECT" requirement="android.permission.BLUETOOTH_CONNECT"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="1051"
+            column="64"
+            startOffset="46280"
+            endLine="1051"
+            endColumn="75"
+            endOffset="46291"/>
+    </incident>
+
+    <incident
+        id="MissingPermission"
+        severity="error"
+        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`">
+        <fix-data missing="android.permission.BLUETOOTH_CONNECT" requirement="android.permission.BLUETOOTH_CONNECT"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="1087"
+            column="33"
+            startOffset="48074"
+            endLine="1087"
+            endColumn="72"
+            endOffset="48113"/>
+    </incident>
+
+</incidents>

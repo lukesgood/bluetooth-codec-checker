@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.1.2" type="incidents">
+
+    <incident
+        id="RedundantLabel"
+        severity="warning"
+        message="Redundant label can be removed">
+        <fix-attribute
+            description="Delete label"
+            namespace="http://schemas.android.com/apk/res/android"
+            attribute="label"/>
+        <location
+            file="${:app*debug*sourceProvider*0*manifest*0}"
+            line="28"
+            column="13"
+            startOffset="1350"
+            endLine="28"
+            endColumn="45"
+            endOffset="1382"/>
+    </incident>
+
+    <incident
+        id="ObsoleteSdkInt"
+        severity="warning"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <fix-data file="${:app*debug*sourceProvider*0*resDir*0}/mipmap-anydpi-v26" folderName="mipmap-anydpi" requiresApi="26"/>
+        <location
+            file="${:app*debug*sourceProvider*0*resDir*0}/mipmap-anydpi-v26"/>
+    </incident>
+
+    <incident
+        id="MonochromeLauncherIcon"
+        severity="warning"
+        message="The application adaptive icon is missing a monochrome tag">
+        <location
+            file="${:app*debug*sourceProvider*0*resDir*0}/mipmap-anydpi-v26/ic_launcher.xml"
+            line="2"
+            column="1"
+            startOffset="39"
+            endLine="5"
+            endColumn="17"
+            endOffset="272"/>
+    </incident>
+
+    <incident
+        id="MonochromeLauncherIcon"
+        severity="warning"
+        message="The application adaptive roundIcon is missing a monochrome tag">
+        <location
+            file="${:app*debug*sourceProvider*0*resDir*0}/mipmap-anydpi-v26/ic_launcher_round.xml"
+            line="2"
+            column="1"
+            startOffset="39"
+            endLine="5"
+            endColumn="17"
+            endOffset="272"/>
+    </incident>
+
+    <incident
+        id="ObsoleteSdkInt"
+        severity="warning"
+        message="Unnecessary; SDK_INT is always >= 26">
+        <fix-data conditional="true"/>
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="65"
+            column="13"
+            startOffset="2657"
+            endLine="65"
+            endColumn="59"
+            endOffset="2703"/>
+    </incident>
+
+    <incident
+        id="DiscouragedPrivateApi"
+        severity="warning"
+        message="Reflective access to getActiveDevice, which is not part of the public SDK and therefore likely to change in future Android releases">
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="284"
+            column="42"
+            startOffset="12159"
+            endLine="284"
+            endColumn="102"
+            endOffset="12219"/>
+    </incident>
+
+    <incident
+        id="DiscouragedPrivateApi"
+        severity="warning"
+        message="Reflective access to getCodecStatus, which is not part of the public SDK and therefore likely to change in future Android releases">
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/BluetoothManager.kt"
+            line="701"
+            column="34"
+            startOffset="29149"
+            endLine="701"
+            endColumn="134"
+            endOffset="29249"/>
+    </incident>
+
+    <incident
+        id="StaticFieldLeak"
+        severity="warning"
+        message="This field leaks a context object">
+        <location
+            file="${:app*debug*sourceProvider*0*javaDir*0}/com/bluetoothcodec/checker/MainViewModel.kt"
+            line="15"
+            column="21"
+            startOffset="467"
+            endLine="15"
+            endColumn="49"
+            endOffset="495"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.17.0">
+        <fix-replace
+            description="Change to 1.17.0"
+            family="Update versions"
+            oldString="1.12.0"
+            replacement="1.17.0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="34"
+            column="21"
+            startOffset="687"
+            endLine="34"
+            endColumn="50"
+            endOffset="716"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.7.0 is available: 2.9.4">
+        <fix-replace
+            description="Change to 2.9.4"
+            family="Update versions"
+            oldString="2.7.0"
+            replacement="2.9.4"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="35"
+            column="21"
+            startOffset="739"
+            endLine="35"
+            endColumn="67"
+            endOffset="785"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.activity:activity-compose than 1.8.2 is available: 1.11.0">
+        <fix-replace
+            description="Change to 1.11.0"
+            family="Update versions"
+            oldString="1.8.2"
+            replacement="1.11.0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="36"
+            column="21"
+            startOffset="808"
+            endLine="36"
+            endColumn="61"
+            endOffset="848"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.7.0 is available: 2.9.4">
+        <fix-replace
+            description="Change to 2.9.4"
+            family="Update versions"
+            oldString="2.7.0"
+            replacement="2.9.4"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="41"
+            column="21"
+            startOffset="1108"
+            endLine="41"
+            endColumn="73"
+            endOffset="1160"/>
+    </incident>
+
+</incidents>

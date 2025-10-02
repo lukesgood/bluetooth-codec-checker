@@ -60,42 +60,35 @@ class BluetoothCodecManager(private val context: Context) {
     fun getChipsetInfo(): ChipsetInfo {
         val supportedCodecs = mutableListOf<String>()
         
-        // Always supported - SBC is mandatory
+        // Always supported
         supportedCodecs.add(BluetoothCodecs.SBC)
         
-        // AAC - supported on Android 8+ devices
+        // AAC - check if actually supported
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             supportedCodecs.add(BluetoothCodecs.AAC)
         }
         
-        // Check chipset for premium codec support
-        val chipsetName = getChipsetName().lowercase()
-        val manufacturer = getSystemProperty("ro.product.manufacturer")?.lowercase() ?: ""
-        
-        // Qualcomm Snapdragon - aptX family
-        if (chipsetName.contains("snapdragon") || chipsetName.contains("qualcomm") || chipsetName.contains("qcom")) {
-            // Most Snapdragon chips support aptX
-            if (getSystemProperty("ro.bluetooth.a2dp_offload.supported")?.contains("true") == true) {
-                supportedCodecs.add(BluetoothCodecs.APTX)
-                
-                // aptX HD on newer Snapdragon chips
-                if (chipsetName.contains("8") || chipsetName.contains("7")) {
-                    supportedCodecs.add(BluetoothCodecs.APTX_HD)
-                    
-                    // aptX Adaptive on latest Snapdragon chips (Android 11+)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        supportedCodecs.add(BluetoothCodecs.APTX_ADAPTIVE)
-                    }
-                }
-            }
+        // Check for aptX support through system properties and libraries
+        if (isCodecSupported("aptX")) {
+            supportedCodecs.add(BluetoothCodecs.APTX)
         }
         
-        // Sony devices - LDAC support
-        if (manufacturer.contains("sony")) {
+        // Check for aptX HD
+        if (isCodecSupported("aptX HD")) {
+            supportedCodecs.add(BluetoothCodecs.APTX_HD)
+        }
+        
+        // Check for aptX Adaptive
+        if (isCodecSupported("aptX Adaptive")) {
+            supportedCodecs.add(BluetoothCodecs.APTX_ADAPTIVE)
+        }
+        
+        // Check for LDAC support
+        if (checkLdacSupport()) {
             supportedCodecs.add(BluetoothCodecs.LDAC)
         }
         
-        // LC3 - Bluetooth LE Audio on Android 13+
+        // Check for LC3 support
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             supportedCodecs.add(BluetoothCodecs.LC3)
         }

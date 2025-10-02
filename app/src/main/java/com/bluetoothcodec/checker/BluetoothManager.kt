@@ -476,13 +476,18 @@ class BluetoothCodecManager(private val context: Context) {
         return try {
             if (a2dpProfile == null) return null
             
-            // Check if audio is actively streaming
+            // Check if this specific device is the active audio target
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val isStreamingAudio = audioManager.isBluetoothA2dpOn && 
-                                 audioManager.isMusicActive &&
-                                 a2dpProfile?.getConnectionState(device) == BluetoothProfile.STATE_CONNECTED
+            val isSystemStreamingAudio = audioManager.isBluetoothA2dpOn && audioManager.isMusicActive
             
-            if (!isStreamingAudio) return null
+            if (!isSystemStreamingAudio) return null
+            
+            // Verify this device is connected
+            if (a2dpProfile?.getConnectionState(device) != BluetoothProfile.STATE_CONNECTED) return null
+            
+            // Check if this device is the active audio device
+            val isActiveAudioDevice = isDeviceActiveAudioTarget(device)
+            if (!isActiveAudioDevice) return null
             
             // Try multiple reflection methods for active codec
             val methods = arrayOf(
@@ -517,24 +522,56 @@ class BluetoothCodecManager(private val context: Context) {
                 }
             }
             
-            // Try system properties for active codec
-            getSystemProperty("persist.vendor.bt.a2dp.active_codec")?.let { prop ->
-                return when (prop.lowercase()) {
-                    "ldac" -> BluetoothCodecs.LDAC
-                    "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
-                    "aptx_hd" -> BluetoothCodecs.APTX_HD
-                    "aptx_ll" -> BluetoothCodecs.APTX_LL
-                    "aptx" -> BluetoothCodecs.APTX
-                    "aac" -> BluetoothCodecs.AAC
-                    "lc3" -> BluetoothCodecs.LC3
-                    "sbc" -> BluetoothCodecs.SBC
-                    else -> null
-                }
-            }
-            
             null
         } catch (e: Exception) {
             null
+        }
+    }
+
+    private fun isDeviceActiveAudioTarget(device: android.bluetooth.BluetoothDevice): Boolean {
+        return try {
+            // Method 1: Check A2DP active device
+            a2dpProfile?.let { profile ->
+                try {
+                    val getActiveDeviceMethod = profile.javaClass.getDeclaredMethod("getActiveDevice")
+                    getActiveDeviceMethod.isAccessible = true
+                    val activeDevice = getActiveDeviceMethod.invoke(profile) as? android.bluetooth.BluetoothDevice
+                    if (activeDevice?.address == device.address) return true
+                } catch (e: Exception) {
+                    // Method failed, try next
+                }
+            }
+            
+            // Method 2: Check AudioManager active device
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val getActiveBluetoothDeviceMethod = audioManager.javaClass.getDeclaredMethod("getActiveBluetoothDevice")
+                    getActiveBluetoothDeviceMethod.isAccessible = true
+                    val activeDevice = getActiveBluetoothDeviceMethod.invoke(audioManager) as? android.bluetooth.BluetoothDevice
+                    if (activeDevice?.address == device.address) return true
+                }
+            } catch (e: Exception) {
+                // Method failed, try next
+            }
+            
+            // Method 3: Check if device is playing audio (most reliable)
+            try {
+                val isPlayingMethod = a2dpProfile?.javaClass?.getDeclaredMethod("isA2dpPlaying", android.bluetooth.BluetoothDevice::class.java)
+                isPlayingMethod?.isAccessible = true
+                val isPlaying = isPlayingMethod?.invoke(a2dpProfile, device) as? Boolean
+                if (isPlaying == true) return true
+            } catch (e: Exception) {
+                // Method failed
+            }
+            
+            // Method 4: Check system properties for active device
+            val activeDeviceAddress = getSystemProperty("persist.vendor.bt.a2dp.active_device")
+            if (activeDeviceAddress == device.address) return true
+            
+            false
+        } catch (e: Exception) {
+            false
         }
     }
 

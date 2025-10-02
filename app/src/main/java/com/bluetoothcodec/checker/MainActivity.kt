@@ -283,8 +283,46 @@ fun ChipsetCard(chipsetInfo: ChipsetInfo, devices: List<BluetoothDevice>) {
                 )
             }
             
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Supported Codecs:",
+                fontWeight = FontWeight.Medium
+            )
+            
+            // Hi-Res support indicator
+            val hiResCodecs = chipsetInfo.supportedCodecs.filter { codec ->
+                BluetoothCodecs.CODEC_INFO[codec]?.let { info ->
+                    isHiResCodec(info.sampleRate)
+                } ?: false
+            }
+            
+            if (hiResCodecs.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "🎵 Hi-Res Audio Support: ",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = hiResCodecs.joinToString(", "),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            
             Spacer(modifier = Modifier.height(8.dp))
-            CodecChart(emptyList(), devices)
+            CodecChart(chipsetInfo.supportedCodecs, devices)
         }
     }
 }
@@ -471,51 +509,6 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
     val screenWidth = configuration.screenWidthDp.dp
     val isTablet = screenWidth > 600.dp
     
-    // Only show actively streaming codecs
-    val activeStreamingCodecs = connectedDevices
-        .filter { it.isConnected }
-        .mapNotNull { device -> 
-            val codec = device.activeCodec
-            if (!codec.isNullOrEmpty() && codec != "SBC") {
-                codec
-            } else null
-        }
-        .distinct()
-    
-    if (activeStreamingCodecs.isEmpty()) {
-        // Show message when no active streaming
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "🎵",
-                    fontSize = 32.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "No Active Audio Streaming",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "Play music to see codec information",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        return
-    }
-    
     val chartHeight = if (isTablet) 400.dp else 280.dp
     
     Card(
@@ -578,7 +571,7 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
                     val occupiedAreas = mutableListOf<Pair<Float, Float>>()
                     val cardSize = if (isTablet) 65f else 55f
                     
-                    activeStreamingCodecs.forEach { codecName ->
+                    BluetoothCodecs.ALL_CODECS.forEach { codecName ->
                         BluetoothCodecs.CODEC_INFO[codecName]?.let { codecInfo ->
                             // Extract actual latency values from the data
                             val latencyValue = when(codecName) {
@@ -646,9 +639,10 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
                     // Render codecs at calculated positions
                     codecPositions.forEach { (codecName, position) ->
                         BluetoothCodecs.CODEC_INFO[codecName]?.let { _ ->
-                            // Show as actively streaming (green dot)
-                            val isActivelyStreaming = true
-                            val isSupported = true
+                            // Determine codec status
+                            val activeDevice = connectedDevices.firstOrNull { it.activeCodec == codecName && it.isConnected }
+                            val isActivelyStreaming = activeDevice != null
+                            val isSupported = supportedCodecs.contains(codecName)
                             
                             Box(
                                 modifier = Modifier.offset(

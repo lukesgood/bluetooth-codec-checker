@@ -13,3 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Build artifacts
+build/
+*.apk
+*.keystore
+.gradle/
+local.properties

@@ -60,42 +60,15 @@ class BluetoothCodecManager(private val context: Context) {
     fun getChipsetInfo(): ChipsetInfo {
         val supportedCodecs = mutableListOf<String>()
         
-        // Always supported
-        supportedCodecs.add(BluetoothCodecs.SBC)
+        // Only add codecs we can verify
+        supportedCodecs.add(BluetoothCodecs.SBC) // Always supported
         
-        // Check for AAC support (most modern devices)
+        // AAC - only on Android 8+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             supportedCodecs.add(BluetoothCodecs.AAC)
         }
         
-        // Check for aptX support (Qualcomm chipsets only)
-        val chipsetName = getChipsetName().lowercase()
-        if (chipsetName.contains("snapdragon") || chipsetName.contains("qualcomm")) {
-            if (isCodecSupported("aptX")) {
-                supportedCodecs.add(BluetoothCodecs.APTX)
-                // Only add HD if explicitly supported
-                if (isCodecSupported("aptX HD")) {
-                    supportedCodecs.add(BluetoothCodecs.APTX_HD)
-                }
-                // aptX Adaptive only on newer Snapdragon chips
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && 
-                    (chipsetName.contains("8") || chipsetName.contains("7"))) {
-                    supportedCodecs.add(BluetoothCodecs.APTX_ADAPTIVE)
-                }
-            }
-        }
-        
-        // Check for LDAC support (mainly Sony devices and some flagships)
-        val manufacturer = getSystemProperty("ro.product.manufacturer")?.lowercase() ?: ""
-        if (manufacturer.contains("sony") || 
-            (isCodecSupported("LDAC") && checkLdacSupport())) {
-            supportedCodecs.add(BluetoothCodecs.LDAC)
-        }
-        
-        // Check for LC3 support (Bluetooth LE Audio - Android 13+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            supportedCodecs.add(BluetoothCodecs.LC3)
-        }
+        // Don't assume any premium codecs unless we can verify them
         
         return ChipsetInfo(
             name = getChipsetName(),

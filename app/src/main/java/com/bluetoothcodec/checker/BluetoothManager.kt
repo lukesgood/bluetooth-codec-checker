@@ -425,9 +425,38 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun getCurrentCodec(device: android.bluetooth.BluetoothDevice): String {
         return try {
-            // Only use system properties - most reliable method
+            if (a2dpProfile == null) return BluetoothCodecs.SBC
+            
+            // Check if device is connected
+            val connectionState = a2dpProfile?.getConnectionState(device)
+            if (connectionState != BluetoothProfile.STATE_CONNECTED) return BluetoothCodecs.SBC
+            
+            // Try to get the negotiated codec from A2DP profile
+            try {
+                val getCodecStatusMethod = a2dpProfile?.javaClass?.getDeclaredMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
+                getCodecStatusMethod?.isAccessible = true
+                val codecStatus = getCodecStatusMethod?.invoke(a2dpProfile, device)
+                
+                codecStatus?.let { status ->
+                    val statusString = status.toString()
+                    // Parse the negotiated codec from the status
+                    return when {
+                        statusString.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
+                        statusString.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
+                        statusString.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
+                        statusString.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
+                        statusString.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
+                        statusString.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
+                        else -> BluetoothCodecs.SBC
+                    }
+                }
+            } catch (e: Exception) {
+                // Method failed
+            }
+            
+            // Fallback: Check system properties for negotiated codec
             getSystemProperty("persist.vendor.bt.a2dp.codec")?.let { codec ->
-                when (codec.lowercase()) {
+                return when (codec.lowercase()) {
                     "ldac" -> BluetoothCodecs.LDAC
                     "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
                     "aptx_hd" -> BluetoothCodecs.APTX_HD
@@ -437,7 +466,9 @@ class BluetoothCodecManager(private val context: Context) {
                     "sbc" -> BluetoothCodecs.SBC
                     else -> BluetoothCodecs.SBC
                 }
-            } ?: BluetoothCodecs.SBC
+            }
+            
+            BluetoothCodecs.SBC
         } catch (e: Exception) {
             BluetoothCodecs.SBC
         }

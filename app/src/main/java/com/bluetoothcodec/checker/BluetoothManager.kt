@@ -459,31 +459,52 @@ class BluetoothCodecManager(private val context: Context) {
             val connectionState = a2dpProfile?.getConnectionState(device)
             if (connectionState != BluetoothProfile.STATE_CONNECTED) return BluetoothCodecs.SBC
             
-            // Try to get the negotiated codec from A2DP profile
-            try {
-                val getCodecStatusMethod = a2dpProfile?.javaClass?.getDeclaredMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
-                getCodecStatusMethod?.isAccessible = true
-                val codecStatus = getCodecStatusMethod?.invoke(a2dpProfile, device)
-                
-                codecStatus?.let { status ->
-                    val statusString = status.toString()
-                    // Parse the negotiated codec from the status
-                    return when {
-                        statusString.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
-                        statusString.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
-                        statusString.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
-                        statusString.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
-                        statusString.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
-                        statusString.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
-                        else -> BluetoothCodecs.SBC
+            // Try multiple methods to get the active codec
+            val methods = arrayOf(
+                "getCodecStatus",
+                "getCurrentCodecConfig", 
+                "getActiveCodecConfig",
+                "getActiveCodec"
+            )
+            
+            for (methodName in methods) {
+                try {
+                    val method = a2dpProfile?.javaClass?.getDeclaredMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
+                    method?.isAccessible = true
+                    val result = method?.invoke(a2dpProfile, device)
+                    
+                    result?.let { codecResult ->
+                        val codecString = codecResult.toString()
+                        android.util.Log.d("BCC", "Method $methodName returned: $codecString")
+                        
+                        // Parse codec from result
+                        val detectedCodec = when {
+                            codecString.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
+                            codecString.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
+                            codecString.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
+                            codecString.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
+                            codecString.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
+                            codecString.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
+                            codecString.contains("SBC", ignoreCase = true) -> BluetoothCodecs.SBC
+                            else -> null
+                        }
+                        
+                        if (detectedCodec != null) {
+                            android.util.Log.d("BCC", "Detected codec: $detectedCodec")
+                            return detectedCodec
+                        }
                     }
+                } catch (e: Exception) {
+                    android.util.Log.d("BCC", "Method $methodName failed: ${e.message}")
+                    continue
                 }
-            } catch (e: Exception) {
-                // Method failed
             }
             
-            // Fallback: Check system properties for negotiated codec
-            getSystemProperty("persist.vendor.bt.a2dp.codec")?.let { codec ->
+            // Try system properties
+            val systemCodec = getSystemProperty("persist.vendor.bt.a2dp.codec")
+            android.util.Log.d("BCC", "System property codec: $systemCodec")
+            
+            systemCodec?.let { codec ->
                 return when (codec.lowercase()) {
                     "ldac" -> BluetoothCodecs.LDAC
                     "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
@@ -496,8 +517,10 @@ class BluetoothCodecManager(private val context: Context) {
                 }
             }
             
+            android.util.Log.d("BCC", "Falling back to SBC")
             BluetoothCodecs.SBC
         } catch (e: Exception) {
+            android.util.Log.e("BCC", "getCurrentCodec error: ${e.message}")
             BluetoothCodecs.SBC
         }
     }

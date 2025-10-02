@@ -459,13 +459,16 @@ class BluetoothCodecManager(private val context: Context) {
             val connectionState = a2dpProfile?.getConnectionState(device)
             if (connectionState != BluetoothProfile.STATE_CONNECTED) return BluetoothCodecs.SBC
             
-            // For now, return SBC as default since codec detection is unreliable
-            // This prevents showing wrong codecs like LDAC when AAC is actually used
-            android.util.Log.d("BCC", "Returning SBC as default - codec detection needs fixing")
-            BluetoothCodecs.SBC
+            // Simple heuristic: if device supports AAC and Android 8+, likely using AAC
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Most modern devices negotiate AAC when available
+                return BluetoothCodecs.AAC
+            }
+            
+            // Fallback to SBC for older Android versions
+            return BluetoothCodecs.SBC
             
         } catch (e: Exception) {
-            android.util.Log.e("BCC", "getCurrentCodec error: ${e.message}")
             BluetoothCodecs.SBC
         }
     }

@@ -457,16 +457,84 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun getCurrentCodec(device: android.bluetooth.BluetoothDevice): String {
         return try {
-            // Method 1: Direct A2DP codec status (most accurate)
+            // Method 1: Real-time streaming codec (most accurate)
+            getRealTimeStreamingCodec(device) ?:
+            // Method 2: Direct A2DP codec status
             getDirectCodecFromA2DP(device) ?:
-            // Method 2: Bluetooth codec configuration
+            // Method 3: Bluetooth codec configuration
             getCodecFromBluetoothConfig(device) ?:
-            // Method 3: Audio focus and routing
+            // Method 4: Audio focus and routing
             getCodecFromAudioRouting() ?:
             // Fallback
             BluetoothCodecs.SBC
         } catch (e: Exception) {
             BluetoothCodecs.SBC
+        }
+    }
+
+    private fun getRealTimeStreamingCodec(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            if (a2dpProfile == null) return null
+            
+            // Check if audio is actively streaming
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val isStreamingAudio = audioManager.isBluetoothA2dpOn && 
+                                 audioManager.isMusicActive &&
+                                 a2dpProfile?.getConnectionState(device) == BluetoothProfile.STATE_CONNECTED
+            
+            if (!isStreamingAudio) return null
+            
+            // Try multiple reflection methods for active codec
+            val methods = arrayOf(
+                "getActiveCodecConfig",
+                "getCurrentCodecConfig", 
+                "getCodecStatus",
+                "getActiveCodec"
+            )
+            
+            for (methodName in methods) {
+                try {
+                    val method = a2dpProfile?.javaClass?.getDeclaredMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
+                    method?.isAccessible = true
+                    val result = method?.invoke(a2dpProfile, device)
+                    
+                    result?.let { codecResult ->
+                        val codecString = codecResult.toString().lowercase()
+                        return when {
+                            codecString.contains("ldac") -> BluetoothCodecs.LDAC
+                            codecString.contains("aptx_adaptive") || codecString.contains("aptx adaptive") -> BluetoothCodecs.APTX_ADAPTIVE
+                            codecString.contains("aptx_hd") || codecString.contains("aptx hd") -> BluetoothCodecs.APTX_HD
+                            codecString.contains("aptx_ll") || codecString.contains("aptx ll") -> BluetoothCodecs.APTX_LL
+                            codecString.contains("aptx") -> BluetoothCodecs.APTX
+                            codecString.contains("aac") -> BluetoothCodecs.AAC
+                            codecString.contains("lc3") -> BluetoothCodecs.LC3
+                            codecString.contains("sbc") -> BluetoothCodecs.SBC
+                            else -> null
+                        }
+                    }
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+            
+            // Try system properties for active codec
+            getSystemProperty("persist.vendor.bt.a2dp.active_codec")?.let { prop ->
+                return when (prop.lowercase()) {
+                    "ldac" -> BluetoothCodecs.LDAC
+                    "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
+                    "aptx_hd" -> BluetoothCodecs.APTX_HD
+                    "aptx_ll" -> BluetoothCodecs.APTX_LL
+                    "aptx" -> BluetoothCodecs.APTX
+                    "aac" -> BluetoothCodecs.AAC
+                    "lc3" -> BluetoothCodecs.LC3
+                    "sbc" -> BluetoothCodecs.SBC
+                    else -> null
+                }
+            }
+            
+            null
+        } catch (e: Exception) {
+            null
         }
     }
 

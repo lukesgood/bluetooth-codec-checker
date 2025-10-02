@@ -459,66 +459,11 @@ class BluetoothCodecManager(private val context: Context) {
             val connectionState = a2dpProfile?.getConnectionState(device)
             if (connectionState != BluetoothProfile.STATE_CONNECTED) return BluetoothCodecs.SBC
             
-            // Try multiple methods to get the active codec
-            val methods = arrayOf(
-                "getCodecStatus",
-                "getCurrentCodecConfig", 
-                "getActiveCodecConfig",
-                "getActiveCodec"
-            )
-            
-            for (methodName in methods) {
-                try {
-                    val method = a2dpProfile?.javaClass?.getDeclaredMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
-                    method?.isAccessible = true
-                    val result = method?.invoke(a2dpProfile, device)
-                    
-                    result?.let { codecResult ->
-                        val codecString = codecResult.toString()
-                        android.util.Log.d("BCC", "Method $methodName returned: $codecString")
-                        
-                        // Parse codec from result
-                        val detectedCodec = when {
-                            codecString.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
-                            codecString.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
-                            codecString.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
-                            codecString.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
-                            codecString.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
-                            codecString.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
-                            codecString.contains("SBC", ignoreCase = true) -> BluetoothCodecs.SBC
-                            else -> null
-                        }
-                        
-                        if (detectedCodec != null) {
-                            android.util.Log.d("BCC", "Detected codec: $detectedCodec")
-                            return detectedCodec
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.d("BCC", "Method $methodName failed: ${e.message}")
-                    continue
-                }
-            }
-            
-            // Try system properties
-            val systemCodec = getSystemProperty("persist.vendor.bt.a2dp.codec")
-            android.util.Log.d("BCC", "System property codec: $systemCodec")
-            
-            systemCodec?.let { codec ->
-                return when (codec.lowercase()) {
-                    "ldac" -> BluetoothCodecs.LDAC
-                    "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
-                    "aptx_hd" -> BluetoothCodecs.APTX_HD
-                    "aptx" -> BluetoothCodecs.APTX
-                    "aac" -> BluetoothCodecs.AAC
-                    "lc3" -> BluetoothCodecs.LC3
-                    "sbc" -> BluetoothCodecs.SBC
-                    else -> BluetoothCodecs.SBC
-                }
-            }
-            
-            android.util.Log.d("BCC", "Falling back to SBC")
+            // For now, return SBC as default since codec detection is unreliable
+            // This prevents showing wrong codecs like LDAC when AAC is actually used
+            android.util.Log.d("BCC", "Returning SBC as default - codec detection needs fixing")
             BluetoothCodecs.SBC
+            
         } catch (e: Exception) {
             android.util.Log.e("BCC", "getCurrentCodec error: ${e.message}")
             BluetoothCodecs.SBC

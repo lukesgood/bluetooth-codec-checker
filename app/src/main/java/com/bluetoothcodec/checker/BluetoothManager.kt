@@ -430,18 +430,62 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun getCurrentCodec(device: android.bluetooth.BluetoothDevice): String {
         return try {
-            // Method 1: Real-time streaming codec (most accurate)
-            getRealTimeStreamingCodec(device) ?:
-            // Method 2: Direct A2DP codec status
-            getDirectCodecFromA2DP(device) ?:
-            // Method 3: Bluetooth codec configuration
-            getCodecFromBluetoothConfig(device) ?:
-            // Method 4: Audio focus and routing
-            getCodecFromAudioRouting() ?:
-            // Fallback
-            BluetoothCodecs.SBC
+            // Only use the most reliable method - actual A2DP codec status
+            getActualActiveCodec(device) ?: BluetoothCodecs.SBC
         } catch (e: Exception) {
             BluetoothCodecs.SBC
+        }
+    }
+
+    private fun getActualActiveCodec(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            if (a2dpProfile == null) return null
+            
+            // Check if device is connected and actively streaming
+            val connectionState = a2dpProfile?.getConnectionState(device)
+            if (connectionState != BluetoothProfile.STATE_CONNECTED) return null
+            
+            // Check if audio is actually playing
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            if (!audioManager.isMusicActive) return null
+            
+            // Try to get the actual active codec configuration
+            try {
+                val getCodecStatusMethod = a2dpProfile?.javaClass?.getDeclaredMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
+                getCodecStatusMethod?.isAccessible = true
+                val codecStatus = getCodecStatusMethod?.invoke(a2dpProfile, device)
+                
+                codecStatus?.let { status ->
+                    val statusString = status.toString()
+                    // Parse the actual codec from the status string
+                    return when {
+                        statusString.contains("LDAC", ignoreCase = true) -> BluetoothCodecs.LDAC
+                        statusString.contains("aptX Adaptive", ignoreCase = true) -> BluetoothCodecs.APTX_ADAPTIVE
+                        statusString.contains("aptX HD", ignoreCase = true) -> BluetoothCodecs.APTX_HD
+                        statusString.contains("aptX", ignoreCase = true) -> BluetoothCodecs.APTX
+                        statusString.contains("AAC", ignoreCase = true) -> BluetoothCodecs.AAC
+                        statusString.contains("LC3", ignoreCase = true) -> BluetoothCodecs.LC3
+                        else -> BluetoothCodecs.SBC
+                    }
+                }
+            } catch (e: Exception) {
+                // Method failed
+            }
+            
+            // Fallback: Check system properties for current active codec
+            val activeCodecProp = getSystemProperty("persist.vendor.bt.a2dp.active_codec")
+            return when (activeCodecProp?.lowercase()) {
+                "ldac" -> BluetoothCodecs.LDAC
+                "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
+                "aptx_hd" -> BluetoothCodecs.APTX_HD
+                "aptx" -> BluetoothCodecs.APTX
+                "aac" -> BluetoothCodecs.AAC
+                "lc3" -> BluetoothCodecs.LC3
+                else -> null
+            }
+            
+        } catch (e: Exception) {
+            null
         }
     }
 

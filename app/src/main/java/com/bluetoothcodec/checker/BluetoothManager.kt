@@ -431,12 +431,58 @@ class BluetoothCodecManager(private val context: Context) {
     }
 
     private fun getChipsetName(): String {
-        val chipset = try {
-            Build.SOC_MANUFACTURER + " " + Build.SOC_MODEL
+        return try {
+            // Try multiple sources for complete chipset information
+            val socManufacturer = getSystemProperty("ro.soc.manufacturer") ?: ""
+            val socModel = getSystemProperty("ro.soc.model") ?: ""
+            val hardware = Build.HARDWARE ?: ""
+            val board = Build.BOARD ?: ""
+            val platform = getSystemProperty("ro.board.platform") ?: ""
+            val chipset = getSystemProperty("ro.chipname") ?: ""
+            val processor = getSystemProperty("ro.product.cpu.abi") ?: ""
+            
+            // Build comprehensive chipset name
+            val parts = mutableListOf<String>()
+            
+            // Primary chipset identification
+            when {
+                socManufacturer.isNotEmpty() && socModel.isNotEmpty() -> {
+                    parts.add("$socManufacturer $socModel")
+                }
+                chipset.isNotEmpty() -> {
+                    parts.add(chipset)
+                }
+                hardware.isNotEmpty() -> {
+                    parts.add("${Build.MANUFACTURER} $hardware")
+                }
+                else -> {
+                    parts.add("${Build.MANUFACTURER} ${Build.MODEL}")
+                }
+            }
+            
+            // Add platform/board details
+            when {
+                platform.isNotEmpty() && platform != hardware -> {
+                    parts.add("($platform)")
+                }
+                board.isNotEmpty() && board != hardware -> {
+                    parts.add("($board)")
+                }
+                hardware.isNotEmpty() -> {
+                    parts.add("($hardware)")
+                }
+            }
+            
+            // Add architecture if available
+            if (processor.isNotEmpty()) {
+                parts.add("[$processor]")
+            }
+            
+            parts.joinToString(" ")
+            
         } catch (e: Exception) {
-            "${Build.MANUFACTURER} ${Build.HARDWARE}"
+            "${Build.MANUFACTURER} ${Build.HARDWARE} (${Build.BOARD}) [${Build.CPU_ABI}]"
         }
-        return "$chipset (${Build.MODEL})"
     }
 
     fun isDeveloperOptionsEnabled(): Boolean {

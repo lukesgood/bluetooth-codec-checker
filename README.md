@@ -107,7 +107,17 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 
 ## Version History
 
-### v1.2 (Current)
+### v1.3 (Current)
+- Enhanced UI with repositioned battery and signal indicators
+- Professional green/gray dot codec indicators (replaced emoji)
+- Manufacturer name detection for 20+ major audio brands
+- Bluetooth signal congestion analysis with radiation charts
+- Environmental interference monitoring (metro, office, mall, residential)
+- Improved codec chart positioning with collision detection
+- Fixed streaming indicator logic for single active codec
+- Optimized APK size and performance
+
+### v1.2
 - Enhanced codec detection accuracy
 - Improved UI with codec chart visualization
 - Added device location estimation

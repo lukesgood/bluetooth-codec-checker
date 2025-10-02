@@ -453,23 +453,156 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun getCurrentCodec(device: android.bluetooth.BluetoothDevice): String {
         return try {
-            if (a2dpProfile == null) return BluetoothCodecs.SBC
+            if (a2dpProfile == null) return "Unknown"
             
             // Check if device is connected
             val connectionState = a2dpProfile?.getConnectionState(device)
-            if (connectionState != BluetoothProfile.STATE_CONNECTED) return BluetoothCodecs.SBC
+            if (connectionState != BluetoothProfile.STATE_CONNECTED) return "Unknown"
             
-            // Simple heuristic: if device supports AAC and Android 8+, likely using AAC
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Most modern devices negotiate AAC when available
-                return BluetoothCodecs.AAC
-            }
+            // Method 1: OS-level codec detection (most accurate)
+            getOSLevelCodec(device)?.let { return it }
             
-            // Fallback to SBC for older Android versions
-            return BluetoothCodecs.SBC
+            // Method 2: Direct A2DP codec status
+            getDirectCodecFromA2DP(device)?.let { return it }
+            
+            // Method 3: Developer options settings (OS level)
+            getDeveloperOptionsCodec()?.let { return it }
+            
+            // Method 4: Audio manager parameters (OS level)
+            getCodecFromAudioRouting()?.let { return it }
+            
+            // Method 5: System properties (fallback)
+            getCurrentCodecFromSystemProps()?.let { return it }
+            
+            // Method 6: Device estimation (last resort)
+            estimateCodecFromDevice(device) ?: "SBC"
             
         } catch (e: Exception) {
-            BluetoothCodecs.SBC
+            "SBC"
+        }
+    }
+    
+    private fun getOSLevelCodec(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            if (a2dpProfile == null) return null
+            
+            // Try to access the same codec information that Android Settings uses
+            val methods = arrayOf(
+                "getCodecStatus",
+                "getActiveCodecConfig", 
+                "getCurrentCodecConfig"
+            )
+            
+            for (methodName in methods) {
+                try {
+                    val method = a2dpProfile?.javaClass?.getDeclaredMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
+                    method?.isAccessible = true
+                    val result = method?.invoke(a2dpProfile, device)
+                    
+                    result?.let { codecResult ->
+                        // Try to extract codec type from the result
+                        val codecType = extractCodecType(codecResult)
+                        if (codecType != null) {
+                            return mapCodecTypeToString(codecType)
+                        }
+                    }
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+            
+            // Alternative: Check BluetoothAdapter directly
+            try {
+                val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+                val getActiveCodecMethod = bluetoothAdapter.javaClass.getDeclaredMethod("getActiveCodec", android.bluetooth.BluetoothDevice::class.java)
+                getActiveCodecMethod.isAccessible = true
+                val activeCodec = getActiveCodecMethod.invoke(bluetoothAdapter, device)
+                
+                activeCodec?.let { codec ->
+                    val codecType = extractCodecType(codec)
+                    if (codecType != null) {
+                        return mapCodecTypeToString(codecType)
+                    }
+                }
+            } catch (e: Exception) {
+                // Continue to next method
+            }
+            
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    private fun extractCodecType(codecResult: Any): Int? {
+        return try {
+            // Try different ways to extract codec type
+            val methods = arrayOf("getCodecType", "getType")
+            val fields = arrayOf("codecType", "mCodecType", "type")
+            
+            // Try methods first
+            for (methodName in methods) {
+                try {
+                    val method = codecResult.javaClass.getDeclaredMethod(methodName)
+                    method.isAccessible = true
+                    val result = method.invoke(codecResult)
+                    if (result is Int) return result
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+            
+            // Try fields
+            for (fieldName in fields) {
+                try {
+                    val field = codecResult.javaClass.getDeclaredField(fieldName)
+                    field.isAccessible = true
+                    val result = field.get(codecResult)
+                    if (result is Int) return result
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+            
+            // If it's a codec config object, try to get the config first
+            try {
+                val getCodecConfigMethod = codecResult.javaClass.getDeclaredMethod("getCodecConfig")
+                getCodecConfigMethod.isAccessible = true
+                val codecConfig = getCodecConfigMethod.invoke(codecResult)
+                
+                codecConfig?.let { config ->
+                    return extractCodecType(config)
+                }
+            } catch (e: Exception) {
+                // Continue
+            }
+            
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    private fun detectAptXCodec(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            // Check for aptX system properties
+            val aptxProp = getSystemProperty("persist.vendor.bt.a2dp.aptx")
+            if (aptxProp == "true") return BluetoothCodecs.APTX
+            
+            val aptxHdProp = getSystemProperty("persist.vendor.bt.a2dp.aptx_hd")
+            if (aptxHdProp == "true") return BluetoothCodecs.APTX_HD
+            
+            // Check device name for aptX capable devices
+            val deviceName = device.name?.lowercase() ?: ""
+            when {
+                deviceName.contains("aptx") -> return BluetoothCodecs.APTX
+                deviceName.contains("qualcomm") -> return BluetoothCodecs.APTX
+                deviceName.contains("jabra") -> return BluetoothCodecs.APTX
+            }
+            
+            null
+        } catch (e: Exception) {
+            null
         }
     }
 

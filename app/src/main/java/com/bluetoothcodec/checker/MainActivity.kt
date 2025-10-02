@@ -103,67 +103,18 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
                     }
                 }
 
-                // Connected Devices
-                if (devices.isNotEmpty()) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Connected Audio Devices",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            
-                            if (isSearching) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                        }
-                    }
-                    
-                    items(devices, key = { device -> "${device.address}_${device.activeCodec}_${device.isConnected}" }) { device ->
-                        DeviceCard(device)
-                    }
-                    
-                    // Bluetooth Signal Congestion Chart
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Bluetooth Signal Analysis",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    
-                    item {
-                        BluetoothCongestionCard(devices)
-                    }
-                } else if (!isSearching) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "No connected audio devices",
-                                    fontSize = 16.sp
-                                )
-                                Text(
-                                    text = "Connect a Bluetooth headset to see codec information",
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                // Bluetooth Signal Analysis - Always show when Bluetooth is enabled
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Bluetooth Signal Analysis",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                item {
+                    BluetoothCongestionCard(devices)
                 }
             }
         }
@@ -322,20 +273,66 @@ fun ChipsetCard(chipsetInfo: ChipsetInfo, devices: List<BluetoothDevice>) {
             }
             
             Spacer(modifier = Modifier.height(8.dp))
+            
+            // Connected devices with real-time streaming info
+            if (devices.isNotEmpty()) {
+                Text(
+                    text = "Connected Devices:",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                devices.forEach { device ->
+                    ConnectedDeviceInfo(device)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
             CodecChart(chipsetInfo.supportedCodecs, devices)
         }
     }
 }
 
 @Composable
-fun DeviceCard(device: BluetoothDevice) {
+fun ConnectedDeviceInfo(device: BluetoothDevice) {
+    val context = LocalContext.current
+    val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+    
+    var isStreaming by remember { mutableStateOf(false) }
+    var currentBitrate by remember { mutableStateOf("Unknown") }
+    var sampleRate by remember { mutableStateOf(0) }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            try {
+                val streaming = audioManager.isBluetoothA2dpOn && audioManager.isMusicActive
+                val rate = audioManager.getProperty(android.media.AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull() ?: 44100
+                
+                isStreaming = streaming
+                sampleRate = rate
+                
+                if (streaming && device.activeCodec != null) {
+                    currentBitrate = calculateRealTimeBitrate(device.activeCodec!!, rate)
+                } else {
+                    currentBitrate = "Not Streaming"
+                }
+            } catch (e: Exception) {
+                currentBitrate = "Unknown"
+            }
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    
     Card(
-        modifier = Modifier.fillMaxWidth()
+        colors = CardDefaults.cardColors(
+            containerColor = if (isStreaming) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                           else MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(12.dp)
         ) {
-            // Device name with battery and signal indicators
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -344,13 +341,12 @@ fun DeviceCard(device: BluetoothDevice) {
                 Column {
                     Text(
                         text = device.name,
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    val manufacturer = getManufacturerName(device.name)
-                    if (manufacturer != "Unknown") {
+                    device.activeCodec?.let { codec ->
                         Text(
-                            text = manufacturer,
+                            text = codec,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium
@@ -358,148 +354,67 @@ fun DeviceCard(device: BluetoothDevice) {
                     }
                 }
                 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Column(
+                    horizontalAlignment = Alignment.End
                 ) {
-                    // Battery
-                    device.batteryLevel?.let { battery ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    color = if (isStreaming) Color(0xFF4CAF50) else Color(0xFF9E9E9E),
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                )
+                        )
                         Text(
-                            text = "${getBatteryIcon(battery)} $battery%",
-                            fontSize = 12.sp,
+                            text = if (isStreaming) "Streaming" else "Connected",
+                            fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     
-                    // Signal strength
-                    device.signalStrength?.let { rssi ->
+                    if (isStreaming) {
                         Text(
-                            text = "${getSignalIcon(rssi)} ${rssi}dBm",
+                            text = currentBitrate,
                             fontSize = 12.sp,
-                            color = getSignalColor(rssi)
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "${sampleRate / 1000}kHz",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = device.address,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            // Device model/class information
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = getDeviceTypeInfo(device.name),
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-            )
-            
-            // Active codec with enhanced visibility
-            device.activeCodec?.let { codec ->
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Enhanced active codec display
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Active Codec",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = codec,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                        
-                        // Real-time codec parameters
-                        BluetoothCodecs.CODEC_INFO[codec]?.let { codecInfo ->
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                // Sampling Rate
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = codecInfo.sampleRate,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Text(
-                                        text = "Sample Rate",
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = getSampleRateQuality(codecInfo.sampleRate),
-                                        fontSize = 9.sp,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                                    )
-                                }
-                                
-                                // Bitrate
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = codecInfo.bitrate,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                    Text(
-                                        text = "Bitrate",
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                
-                                // Latency
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = codecInfo.latency,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.tertiary
-                                    )
-                                    Text(
-                                        text = "Latency",
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
+    }
+}
+
+fun calculateRealTimeBitrate(codec: String, sampleRate: Int): String {
+    return when (codec) {
+        "LDAC" -> when {
+            sampleRate >= 96000 -> "990 kbps"
+            sampleRate >= 48000 -> "660 kbps"
+            else -> "330 kbps"
+        }
+        "aptX HD" -> "576 kbps"
+        "aptX Adaptive" -> when {
+            sampleRate >= 96000 -> "420 kbps"
+            else -> "279 kbps"
+        }
+        "aptX", "aptX LL" -> "352 kbps"
+        "AAC" -> when {
+            sampleRate >= 48000 -> "320 kbps"
+            else -> "256 kbps"
+        }
+        "LC3" -> "160 kbps"
+        "SBC" -> "328 kbps"
+        else -> "Unknown"
     }
 }
 
@@ -510,6 +425,32 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
     val isTablet = screenWidth > 600.dp
     
     val chartHeight = if (isTablet) 400.dp else 280.dp
+    
+    // Real-time streaming info
+    val context = LocalContext.current
+    val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+    
+    var isStreaming by remember { mutableStateOf(false) }
+    var streamingSampleRate by remember { mutableStateOf(0) }
+    var activeStreamingCodec by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            try {
+                val streaming = audioManager.isBluetoothA2dpOn && audioManager.isMusicActive
+                val rate = audioManager.getProperty(android.media.AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull() ?: 44100
+                
+                isStreaming = streaming
+                streamingSampleRate = rate
+                activeStreamingCodec = if (streaming) {
+                    connectedDevices.firstOrNull()?.activeCodec
+                } else null
+            } catch (e: Exception) {
+                isStreaming = false
+            }
+            kotlinx.coroutines.delay(1000)
+        }
+    }
     
     Card(
         modifier = Modifier
@@ -522,12 +463,41 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = "Latency (ms)",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Latency (ms)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                // Real-time streaming info
+                if (isStreaming && activeStreamingCodec != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    color = Color(0xFF4CAF50),
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                )
+                        )
+                        Text(
+                            text = "$activeStreamingCodec • ${streamingSampleRate / 1000}kHz",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
             
             Spacer(modifier = Modifier.height(8.dp))
             
@@ -687,8 +657,21 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
                                             )
                                         }
                                         
-                                        // Active streaming indicator
-                                        if (isActivelyStreaming) {
+                                        // Active streaming indicator with sample rate
+                                        if (isActivelyStreaming && isStreaming && codecName == activeStreamingCodec) {
+                                            Text(
+                                                text = "●",
+                                                fontSize = if (isTablet) 12.sp else 10.sp,
+                                                color = Color.Green,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "${streamingSampleRate / 1000}k",
+                                                fontSize = if (isTablet) 6.sp else 5.sp,
+                                                color = Color.Green,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        } else if (isActivelyStreaming) {
                                             Text(
                                                 text = "●",
                                                 fontSize = if (isTablet) 12.sp else 10.sp,
@@ -992,17 +975,131 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Signal Environment Analysis",
+                text = "Bluetooth Signal Analysis",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
             
             Spacer(modifier = Modifier.height(12.dp))
             
+            // Connected devices info
+            if (devices.isNotEmpty()) {
+                Text(
+                    text = "Connected Devices (${devices.size})",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                devices.forEach { device ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Green, androidx.compose.foundation.shape.CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = device.name ?: "Unknown Device",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Only show codec if it's not unknown
+                            val codec = device.activeCodec ?: ""
+                            if (codec.isNotEmpty() && codec != "Unknown") {
+                                Text(
+                                    text = codec,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+                            
+                            // Signal strength indicator
+                            device.signalStrength?.let { rssi ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    repeat(4) { index ->
+                                        val threshold = -90 + (index * 15) // -90, -75, -60, -45 dBm thresholds
+                                        Box(
+                                            modifier = Modifier
+                                                .width(3.dp)
+                                                .height((6 + index * 2).dp)
+                                                .background(
+                                                    if (rssi > threshold) Color.Green else Color.Gray.copy(alpha = 0.3f),
+                                                    androidx.compose.foundation.shape.RoundedCornerShape(1.dp)
+                                                )
+                                        )
+                                        if (index < 3) Spacer(modifier = Modifier.width(1.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${rssi}dBm",
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            
+                            // Battery indicator
+                            device.batteryLevel?.let { battery ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(16.dp)
+                                            .height(8.dp)
+                                            .background(
+                                                Color.Gray.copy(alpha = 0.3f),
+                                                androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                                            )
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .fillMaxWidth(battery / 100f)
+                                                .background(
+                                                    when {
+                                                        battery > 50 -> Color.Green
+                                                        battery > 20 -> Color(0xFFFF9800)
+                                                        else -> Color.Red
+                                                    },
+                                                    androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                                                )
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${battery}%",
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
             // Environmental signal detection
             val nearbySignals = estimateNearbySignals(devices)
             val environmentType = detectEnvironmentType(devices, nearbySignals)
             val detectedSignalNames = generateNearbySignalNames(environmentType, nearbySignals)
+            val otherSignals = nearbySignals - devices.size
+            val interferenceDevices = detectedSignalNames.take(minOf(otherSignals, 12))
+            val angleStep = 360f / maxOf(nearbySignals, 8)
             
             // Radiation chart for signal interference
             Box(
@@ -1033,7 +1130,6 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                     }
                     
                     // Draw signal sources as dots around the chart
-                    val angleStep = 360f / maxOf(nearbySignals, 8)
                     
                     // First, draw connected Bluetooth devices with their signal strength circles
                     devices.forEachIndexed { index, device ->
@@ -1043,11 +1139,10 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
                         val y = centerY + (distance * Math.sin(angle)).toFloat()
                         
-                        // Draw signal strength circle for each device (with null safety)
-                        val signalStrength = device.signalStrength ?: 50 // Default to 50% if null
-                        val normalizedSignal = signalStrength.coerceIn(0, 100) // Ensure 0-100 range
-                        val signalRadius = (normalizedSignal / 100f) * 40f + 20f // 20-60px radius
-                        val signalAlpha = (normalizedSignal / 100f) * 0.3f + 0.1f // 0.1-0.4 alpha
+                        // Draw signal strength circle for each device
+                        val signalStrength = (device.signalStrength ?: 50).coerceIn(0, 100) // Ensure valid range
+                        val signalRadius = (signalStrength / 100f) * 40f + 20f // 20-60px radius based on signal
+                        val signalAlpha = ((signalStrength / 100f) * 0.3f + 0.1f).coerceIn(0.1f, 0.4f) // Ensure valid alpha range
                         
                         // Signal strength circle
                         drawCircle(
@@ -1070,8 +1165,7 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                     }
                     
                     // Then draw other interference sources
-                    val otherSignals = nearbySignals - devices.size
-                    repeat(minOf(otherSignals, 12)) { index ->
+                    interferenceDevices.forEachIndexed { index, (deviceName, _) ->
                         val angle = Math.toRadians(((index + devices.size) * angleStep).toDouble())
                         val signalStrength = (0.4f + Math.random() * 0.5f).toFloat()
                         val distance = maxRadius * signalStrength
@@ -1097,6 +1191,50 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         color = Color.Blue,
                         radius = 8f,
                         center = androidx.compose.ui.geometry.Offset(centerX, centerY)
+                    )
+                }
+                
+                // Device name labels overlay
+                devices.forEachIndexed { index, device ->
+                    val angle = Math.toRadians((index * 60.0))
+                    val distance = (200.dp.value * 0.35f) // Adjust for Box size
+                    
+                    val offsetX = (distance * Math.cos(angle)).dp
+                    val offsetY = (distance * Math.sin(angle)).dp
+                    
+                    Text(
+                        text = device.name ?: "Unknown",
+                        fontSize = 8.sp,
+                        color = Color.Black,
+                        modifier = Modifier
+                            .offset(x = offsetX, y = offsetY + 15.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.8f),
+                                androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                            )
+                            .padding(horizontal = 2.dp)
+                    )
+                }
+                
+                // Interference device name labels overlay
+                interferenceDevices.forEachIndexed { index, (deviceName, _) ->
+                    val angle = Math.toRadians(((index + devices.size) * angleStep).toDouble())
+                    val distance = (200.dp.value * 0.35f) // Adjust for Box size
+                    
+                    val offsetX = (distance * Math.cos(angle)).dp
+                    val offsetY = (distance * Math.sin(angle)).dp
+                    
+                    Text(
+                        text = deviceName,
+                        fontSize = 7.sp,
+                        color = Color.Red,
+                        modifier = Modifier
+                            .offset(x = offsetX, y = offsetY + 12.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.9f),
+                                androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                            )
+                            .padding(horizontal = 1.dp)
                     )
                 }
                 
@@ -1415,5 +1553,30 @@ fun getSignalQuality(rssi: Int): String {
         rssi >= -60 -> "Good"
         rssi >= -70 -> "Fair"
         else -> "Poor"
+    }
+}
+
+fun guessCodecFromStream(sampleRate: Int, bufferSize: Int): Pair<String, Int> {
+    return when {
+        // Hi-Res indicators (96kHz+) - likely LDAC
+        sampleRate >= 96000 -> Pair("LDAC", 85)
+        
+        // High quality 48kHz with small buffers - likely AAC or aptX HD
+        sampleRate >= 48000 && bufferSize <= 256 -> Pair("AAC", 75)
+        
+        // Standard 48kHz - likely AAC
+        sampleRate >= 48000 -> Pair("AAC", 70)
+        
+        // CD quality with large buffers - likely SBC
+        sampleRate == 44100 && bufferSize > 512 -> Pair("SBC", 80)
+        
+        // CD quality with small buffers - could be aptX
+        sampleRate == 44100 && bufferSize <= 256 -> Pair("aptX", 65)
+        
+        // Standard CD quality - likely SBC
+        sampleRate == 44100 -> Pair("SBC", 75)
+        
+        // Lower quality - definitely SBC
+        else -> Pair("SBC", 90)
     }
 }

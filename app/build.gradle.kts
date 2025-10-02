@@ -15,6 +15,22 @@ android {
         versionName = "1.2"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../bcc-release-key.keystore")
+            storePassword = "android"
+            keyAlias = "bcc"
+            keyPassword = "android"
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
     buildFeatures {
         compose = true
     }

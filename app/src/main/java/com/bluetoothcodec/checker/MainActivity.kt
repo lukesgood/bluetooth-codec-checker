@@ -1043,10 +1043,11 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
                         val y = centerY + (distance * Math.sin(angle)).toFloat()
                         
-                        // Draw signal strength circle for each device
+                        // Draw signal strength circle for each device (with null safety)
                         val signalStrength = device.signalStrength ?: 50 // Default to 50% if null
-                        val signalRadius = (signalStrength / 100f) * 40f + 20f // 20-60px radius based on signal
-                        val signalAlpha = (signalStrength / 100f) * 0.3f + 0.1f // 0.1-0.4 alpha
+                        val normalizedSignal = signalStrength.coerceIn(0, 100) // Ensure 0-100 range
+                        val signalRadius = (normalizedSignal / 100f) * 40f + 20f // 20-60px radius
+                        val signalAlpha = (normalizedSignal / 100f) * 0.3f + 0.1f // 0.1-0.4 alpha
                         
                         // Signal strength circle
                         drawCircle(

@@ -1034,9 +1034,33 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                     
                     // Draw signal sources as dots around the chart
                     val angleStep = 360f / maxOf(nearbySignals, 8)
-                    repeat(minOf(nearbySignals, 16)) { index ->
-                        val angle = Math.toRadians((index * angleStep).toDouble())
-                        val signalStrength = (0.4f + Math.random() * 0.5f).toFloat() // Random strength
+                    
+                    // First, draw connected Bluetooth devices
+                    devices.forEachIndexed { index, device ->
+                        val angle = Math.toRadians((index * 60.0)) // Spread connected devices
+                        val distance = maxRadius * 0.7f // Fixed distance for connected devices
+                        
+                        val x = centerX + (distance * Math.cos(angle)).toFloat()
+                        val y = centerY + (distance * Math.sin(angle)).toFloat()
+                        
+                        // Connected devices - green with border
+                        drawCircle(
+                            color = Color.Green,
+                            radius = 10f,
+                            center = androidx.compose.ui.geometry.Offset(x, y)
+                        )
+                        drawCircle(
+                            color = Color.White,
+                            radius = 6f,
+                            center = androidx.compose.ui.geometry.Offset(x, y)
+                        )
+                    }
+                    
+                    // Then draw other interference sources
+                    val otherSignals = nearbySignals - devices.size
+                    repeat(minOf(otherSignals, 12)) { index ->
+                        val angle = Math.toRadians(((index + devices.size) * angleStep).toDouble())
+                        val signalStrength = (0.4f + Math.random() * 0.5f).toFloat()
                         val distance = maxRadius * signalStrength
                         
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
@@ -1076,7 +1100,16 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                                 .background(Color.Blue, androidx.compose.foundation.shape.CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Your Device", fontSize = 8.sp)
+                        Text("Your Phone", fontSize = 8.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(Color.Green, androidx.compose.foundation.shape.CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Connected Device", fontSize = 8.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -1085,7 +1118,7 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                                 .background(Color.Red, androidx.compose.foundation.shape.CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Strong Signal", fontSize = 8.sp)
+                        Text("Interference", fontSize = 8.sp)
                     }
                 }
             }

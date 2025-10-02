@@ -60,10 +60,45 @@ class BluetoothCodecManager(private val context: Context) {
     fun getChipsetInfo(): ChipsetInfo {
         val supportedCodecs = mutableListOf<String>()
         
-        // Only add SBC - the only codec guaranteed on all Bluetooth devices
+        // Always supported - SBC is mandatory
         supportedCodecs.add(BluetoothCodecs.SBC)
         
-        // Don't assume any other codecs unless we can actually verify them
+        // AAC - supported on Android 8+ devices
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            supportedCodecs.add(BluetoothCodecs.AAC)
+        }
+        
+        // Check chipset for premium codec support
+        val chipsetName = getChipsetName().lowercase()
+        val manufacturer = getSystemProperty("ro.product.manufacturer")?.lowercase() ?: ""
+        
+        // Qualcomm Snapdragon - aptX family
+        if (chipsetName.contains("snapdragon") || chipsetName.contains("qualcomm") || chipsetName.contains("qcom")) {
+            // Most Snapdragon chips support aptX
+            if (getSystemProperty("ro.bluetooth.a2dp_offload.supported")?.contains("true") == true) {
+                supportedCodecs.add(BluetoothCodecs.APTX)
+                
+                // aptX HD on newer Snapdragon chips
+                if (chipsetName.contains("8") || chipsetName.contains("7")) {
+                    supportedCodecs.add(BluetoothCodecs.APTX_HD)
+                    
+                    // aptX Adaptive on latest Snapdragon chips (Android 11+)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        supportedCodecs.add(BluetoothCodecs.APTX_ADAPTIVE)
+                    }
+                }
+            }
+        }
+        
+        // Sony devices - LDAC support
+        if (manufacturer.contains("sony")) {
+            supportedCodecs.add(BluetoothCodecs.LDAC)
+        }
+        
+        // LC3 - Bluetooth LE Audio on Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            supportedCodecs.add(BluetoothCodecs.LC3)
+        }
         
         return ChipsetInfo(
             name = getChipsetName(),

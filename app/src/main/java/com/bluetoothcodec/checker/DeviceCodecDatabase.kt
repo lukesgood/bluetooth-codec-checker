@@ -110,7 +110,13 @@ object DeviceCodecDatabase {
         
         // OnePlus
         "buds pro" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
-        "buds z2" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX)
+        "buds z2" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
+        
+        // LG
+        "tone free" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
+        "tone+" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
+        "tone ultra" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
+        "hbs-" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX)
     )
     
     fun getSupportedCodecs(deviceName: String): List<String>? {
@@ -144,6 +150,7 @@ object DeviceCodecDatabase {
             name.contains("jabra") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC)
             name.contains("jbl") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC)
             name.contains("anker") || name.contains("soundcore") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX)
+            name.contains("lg") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX)
             else -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC)
         }
     }

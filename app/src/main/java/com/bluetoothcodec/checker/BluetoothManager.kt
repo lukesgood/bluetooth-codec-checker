@@ -520,7 +520,25 @@ class BluetoothCodecManager(private val context: Context) {
             // Method 5: System properties (fallback)
             getCurrentCodecFromSystemProps()?.let { return it }
             
-            // Method 6: Device estimation (last resort)
+            // Method 6: Media metrics
+            detectCodecFromMediaMetrics(device)?.let { return it }
+            
+            // Method 7: Bluetooth HCI
+            detectCodecFromBluetoothHci(device)?.let { return it }
+            
+            // Method 8: Vendor properties
+            detectCodecFromVendorProperties(device)?.let { return it }
+            
+            // Method 9: Audio policy
+            detectCodecFromAudioPolicy(device)?.let { return it }
+            
+            // Method 10: Bluetooth stack
+            detectCodecFromBluetoothStack(device)?.let { return it }
+            
+            // Method 11: Kernel logs
+            detectCodecFromKernelLogs(device)?.let { return it }
+            
+            // Method 12: Device estimation (last resort)
             estimateCodecFromDevice(device) ?: "SBC"
             
         } catch (e: Exception) {
@@ -1778,5 +1796,152 @@ class BluetoothCodecManager(private val context: Context) {
         } catch (e: Exception) {
             false
         }
+    }
+    
+    // === COMPREHENSIVE CODEC DETECTION METHODS ===
+    
+    private fun detectCodecFromMediaMetrics(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            val mediaMetrics = context.getSystemService(Context.MEDIA_METRICS_SERVICE)
+            val clazz = mediaMetrics?.javaClass
+            val method = clazz?.getMethod("getBluetoothCodec", String::class.java)
+            method?.invoke(mediaMetrics, device.address) as? String
+        } catch (e: Exception) { null }
+    }
+    
+    private fun detectCodecFromBluetoothHci(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            val props = arrayOf(
+                "vendor.bluetooth.hci.codec",
+                "ro.bluetooth.hci.codec",
+                "persist.bluetooth.hci.codec"
+            )
+            props.forEach { prop ->
+                getSystemProperty(prop)?.let { value ->
+                    when (value.lowercase()) {
+                        "ldac" -> return BluetoothCodecs.LDAC
+                        "aptx_adaptive" -> return BluetoothCodecs.APTX_ADAPTIVE
+                        "aptx_hd" -> return BluetoothCodecs.APTX_HD
+                        "aptx" -> return BluetoothCodecs.APTX
+                        "aac" -> return BluetoothCodecs.AAC
+                        "lc3" -> return BluetoothCodecs.LC3
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) { null }
+    }
+    
+    private fun detectCodecFromVendorProperties(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            val vendorProps = arrayOf(
+                "vendor.qcom.bluetooth.soc",
+                "vendor.bluetooth.codec.type",
+                "ro.vendor.bluetooth.codec",
+                "persist.vendor.bluetooth.codec",
+                "vendor.audio.bluetooth.codec"
+            )
+            vendorProps.forEach { prop ->
+                getSystemProperty(prop)?.let { value ->
+                    when {
+                        value.contains("ldac", true) -> return BluetoothCodecs.LDAC
+                        value.contains("aptx_adaptive", true) -> return BluetoothCodecs.APTX_ADAPTIVE
+                        value.contains("aptx_hd", true) -> return BluetoothCodecs.APTX_HD
+                        value.contains("aptx", true) -> return BluetoothCodecs.APTX
+                        value.contains("aac", true) -> return BluetoothCodecs.AAC
+                        value.contains("lc3", true) -> return BluetoothCodecs.LC3
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) { null }
+    }
+    
+    private fun detectCodecFromAudioPolicy(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val methods = arrayOf("getBluetoothCodec", "getA2dpCodec", "getCurrentCodec")
+            methods.forEach { methodName ->
+                try {
+                    val method = audioManager.javaClass.getMethod(methodName)
+                    val result = method.invoke(audioManager)
+                    result?.toString()?.let { codec ->
+                        when {
+                            codec.contains("LDAC", true) -> return BluetoothCodecs.LDAC
+                            codec.contains("aptX Adaptive", true) -> return BluetoothCodecs.APTX_ADAPTIVE
+                            codec.contains("aptX HD", true) -> return BluetoothCodecs.APTX_HD
+                            codec.contains("aptX", true) -> return BluetoothCodecs.APTX
+                            codec.contains("AAC", true) -> return BluetoothCodecs.AAC
+                            codec.contains("LC3", true) -> return BluetoothCodecs.LC3
+                        }
+                    }
+                } catch (e: Exception) { /* Continue */ }
+            }
+            null
+        } catch (e: Exception) { null }
+    }
+    
+    private fun detectCodecFromBluetoothStack(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            val adapter = bluetoothManager.adapter
+            val stackMethods = arrayOf(
+                "getCodecType",
+                "getCurrentA2dpCodec", 
+                "getActiveA2dpCodec",
+                "getBluetoothCodecConfig"
+            )
+            stackMethods.forEach { methodName ->
+                try {
+                    val method = adapter.javaClass.getMethod(methodName, android.bluetooth.BluetoothDevice::class.java)
+                    val result = method.invoke(adapter, device)
+                    when (result) {
+                        is Int -> {
+                            when (result) {
+                                0 -> return BluetoothCodecs.SBC
+                                1 -> return BluetoothCodecs.AAC
+                                2 -> return BluetoothCodecs.APTX
+                                3 -> return BluetoothCodecs.APTX_HD
+                                4 -> return BluetoothCodecs.LDAC
+                                5 -> return BluetoothCodecs.APTX_ADAPTIVE
+                                10 -> return BluetoothCodecs.LC3
+                            }
+                        }
+                        is String -> {
+                            when {
+                                result.contains("LDAC", true) -> return BluetoothCodecs.LDAC
+                                result.contains("aptX Adaptive", true) -> return BluetoothCodecs.APTX_ADAPTIVE
+                                result.contains("aptX HD", true) -> return BluetoothCodecs.APTX_HD
+                                result.contains("aptX", true) -> return BluetoothCodecs.APTX
+                                result.contains("AAC", true) -> return BluetoothCodecs.AAC
+                                result.contains("LC3", true) -> return BluetoothCodecs.LC3
+                            }
+                        }
+                    }
+                } catch (e: Exception) { /* Continue */ }
+            }
+            null
+        } catch (e: Exception) { null }
+    }
+    
+    private fun detectCodecFromKernelLogs(device: android.bluetooth.BluetoothDevice): String? {
+        return try {
+            val logcatProcess = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-s", "bt_stack", "BluetoothA2dp"))
+            val output = logcatProcess.inputStream.bufferedReader().use { it.readText() }
+            val lines = output.split("\n").takeLast(50) // Recent logs only
+            
+            lines.forEach { line ->
+                when {
+                    line.contains("LDAC") && line.contains("START") -> return BluetoothCodecs.LDAC
+                    line.contains("aptX Adaptive") && line.contains("START") -> return BluetoothCodecs.APTX_ADAPTIVE
+                    line.contains("aptX HD") && line.contains("START") -> return BluetoothCodecs.APTX_HD
+                    line.contains("aptX") && line.contains("START") -> return BluetoothCodecs.APTX
+                    line.contains("AAC") && line.contains("START") -> return BluetoothCodecs.AAC
+                    line.contains("LC3") && line.contains("START") -> return BluetoothCodecs.LC3
+                    line.contains("SBC") && line.contains("START") -> return BluetoothCodecs.SBC
+                }
+            }
+            null
+        } catch (e: Exception) { null }
     }
 }

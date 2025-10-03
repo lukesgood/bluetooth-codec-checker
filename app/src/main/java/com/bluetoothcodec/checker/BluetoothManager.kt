@@ -505,43 +505,37 @@ class BluetoothCodecManager(private val context: Context) {
             val connectionState = a2dpProfile?.getConnectionState(device)
             if (connectionState != BluetoothProfile.STATE_CONNECTED) return "Unknown"
             
-            // Method 1: Force aptX for LG devices
-            val deviceName = device.name?.lowercase() ?: ""
-            if (deviceName.contains("lg") || deviceName.contains("tone")) {
-                return BluetoothCodecs.APTX
-            }
-            
-            // Method 2: OS-level codec detection (most accurate)
+            // Method 1: OS-level codec detection (most accurate)
             getOSLevelCodec(device)?.let { return it }
             
-            // Method 3: Direct A2DP codec status
+            // Method 2: Direct A2DP codec status
             getDirectCodecFromA2DP(device)?.let { return it }
             
-            // Method 4: Developer options settings (OS level)
+            // Method 3: Developer options settings (OS level)
             getDeveloperOptionsCodec()?.let { return it }
             
-            // Method 5: Audio manager parameters (OS level)
+            // Method 4: Audio manager parameters (OS level)
             getCodecFromAudioRouting()?.let { return it }
             
-            // Method 6: System properties (fallback)
+            // Method 5: System properties (fallback)
             getCurrentCodecFromSystemProps()?.let { return it }
             
-            // Method 7: Media metrics
+            // Method 6: Media metrics
             detectCodecFromMediaMetrics(device)?.let { return it }
             
-            // Method 8: Bluetooth HCI
+            // Method 7: Bluetooth HCI
             detectCodecFromBluetoothHci(device)?.let { return it }
             
-            // Method 9: Vendor properties
+            // Method 8: Vendor properties
             detectCodecFromVendorProperties(device)?.let { return it }
             
-            // Method 10: Audio policy
+            // Method 9: Audio policy
             detectCodecFromAudioPolicy(device)?.let { return it }
             
-            // Method 11: Bluetooth stack
+            // Method 10: Bluetooth stack
             detectCodecFromBluetoothStack(device)?.let { return it }
             
-            // Method 12: Kernel logs
+            // Method 11: Kernel logs
             detectCodecFromKernelLogs(device)?.let { return it }
             
             // Method 12: Device estimation (last resort)

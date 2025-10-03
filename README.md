@@ -107,7 +107,15 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 
 ## Version History
 
-### v1.3 (Current)
+### v1.4 (Current)
+- **Comprehensive codec detection** with 12 different OS-level methods
+- **LG device support** added to codec database
+- **Enhanced detection accuracy** covering all Android versions and OEMs
+- **New detection methods**: Media Metrics, HCI, Vendor Properties, Audio Policy, Bluetooth Stack, Kernel Logs
+- **Fixed SBC fallback issue** for aptX-capable devices
+- **Improved reliability** for codec identification across different manufacturers
+
+### v1.3
 - Enhanced UI with repositioned battery and signal indicators
 - Professional green/gray dot codec indicators (replaced emoji)
 - Manufacturer name detection for 20+ major audio brands

@@ -1,0 +1,59 @@
+# Bluetooth Codec Checker v1.5 Release Notes
+
+## 🎯 Major Improvements
+
+### ✅ Eliminated All Fake Data
+- **Removed fake RSSI generation** using random time-based variations
+- **Deleted simulated device names** like "iPhone 15", "Galaxy S24", etc.
+- **Eliminated fake signal strength** simulation and interference visualization
+- **No more fake nearby devices** - only shows real Bluetooth connections
+
+### 🔧 Critical Bug Fixes
+- **Fixed app crashes** caused by invalid RSSI range (-40..-80 corrected to -80..-40)
+- **Resolved IllegalArgumentException** in nearby device detection
+- **Improved stability** for real Bluetooth scanning operations
+
+### 🎨 UI/UX Enhancements
+- **Removed duplicate device information** from Device Information panel
+- **Deleted Hi-Res audio codec text** for cleaner interface
+- **Streamlined panels** to avoid redundant data display
+- **Cleaner radar chart** showing only genuine device connections
+
+### 📡 Real Interference Detection
+- **Actual nearby device scanning** using Android BLE APIs
+- **Differentiated signal strengths** with color-coded indicators:
+  - 🔴 **Red**: Strong signals (> -50dBm) - close devices
+  - 🟠 **Orange**: Medium signals (-50 to -65dBm) - moderate distance  
+  - 🟡 **Yellow**: Weak signals (< -65dBm) - far devices
+- **Real RSSI values** displayed in dBm format
+- **Variable radar positioning** based on actual signal strength
+
+## 🔍 What's Now Authentic
+- Only shows **real connected Bluetooth devices**
+- Uses **genuine RSSI values** from device connections
+- **Actual codec detection** without fake fallback data
+- **Real nearby device discovery** with proper permissions
+- **Authentic signal analysis** based on Android APIs
+
+## 📱 Technical Details
+- **Target SDK**: 34 (Android 14)
+- **Min SDK**: 26 (Android 8.0)
+- **Permissions**: BLUETOOTH_CONNECT, BLUETOOTH_SCAN, ACCESS_FINE_LOCATION
+- **Architecture**: MVVM with Jetpack Compose
+- **Real-time updates**: 3-second refresh cycle for nearby devices
+
+## 🚀 Installation
+```bash
+adb install bluetooth-codec-checker-v1.5.apk
+```
+
+## 📋 Version History
+- **v1.5**: Remove fake data, fix crashes, clean UI
+- **v1.4**: Multiple codec detection methods, LG device support
+- **v1.3**: Enhanced UI, manufacturer detection, interference analysis
+- **v1.2**: Codec chart visualization, device location estimation
+- **v1.1**: Chipset detection, improved device recognition
+- **v1.0**: Initial release with basic codec detection
+
+---
+*This release focuses on authenticity and reliability, showing only real Bluetooth data without any simulated or fake information.*

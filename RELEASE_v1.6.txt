@@ -1,0 +1,58 @@
+# Bluetooth Codec Checker v1.6 - Enhanced Detection Accuracy
+
+## 🎯 Major Improvements
+
+### Enhanced Codec Detection Accuracy
+- **Active Stream Detection**: New real-time codec detection during audio playback
+- **Improved OS-Level Detection**: 3 additional Android API reflection methods
+- **Better Codec Extraction**: Enhanced parsing with string fallback analysis
+- **Extended Codec Support**: Added LC3 and vendor-specific codec mappings
+
+### Detection Method Priority (6 Methods)
+1. **Active Stream Analysis** - Most accurate during playback
+2. **Developer Options** - User configured preference  
+3. **OS-Level Detection** - Runtime negotiated codec
+4. **Audio Manager Parameters** - System level detection
+5. **System Properties** - Vendor specific properties
+6. **Enhanced Device Estimation** - Intelligent fallback with capability validation
+
+### Device Recognition Improvements
+- Enhanced Sony device detection (WH-1000X, WF-1000X series)
+- Better Sennheiser Momentum series recognition
+- Improved Jabra Elite series detection
+- Cross-validation between device and phone capabilities
+
+## 🔧 Technical Enhancements
+
+### Active Stream Codec Detection
+- Monitors 5 active codec parameters during playback
+- Sample rate analysis (96kHz+ = LDAC/aptX HD, 48kHz = aptX)
+- Only activates during music playback for accuracy
+
+### Improved Reflection Methods
+- Added `getCodecConfig`, `getOptionalCodecsEnabled`, `getCodecConfigPreference`
+- Better codec type extraction with additional field names
+- String parsing fallback for codec identification
+
+### Enhanced Codec Mapping
+- LC3 codec support (type 10)
+- Vendor-specific mappings (100=aptX, 101=aptX HD, 102=LDAC)
+- Better error handling and logging
+
+## 📱 Compatibility
+- Based on stable v1.5 codebase
+- Maintains all existing functionality
+- Improved logging for debugging
+- Better fallback to SBC instead of "Unknown"
+
+## 🚀 Key Benefits
+- **Real-time accuracy** during audio playback
+- **Better Android API integration** with more reflection methods
+- **Smarter device recognition** with capability cross-checking
+- **Enhanced debugging** with detailed logging
+- **Improved reliability** with multiple detection fallbacks
+
+---
+**Installation**: Install bluetooth-codec-checker-v1.6.apk
+**Size**: ~7.2MB
+**Requirements**: Android 8.0+ (API 26+)

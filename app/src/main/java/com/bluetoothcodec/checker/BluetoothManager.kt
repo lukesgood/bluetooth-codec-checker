@@ -583,6 +583,12 @@ class BluetoothCodecManager(private val context: Context) {
             
             android.util.Log.d("getCurrentCodec", "Starting codec detection for device: ${device.address}")
             
+            // Method 0: Active stream analysis (most accurate during playback)
+            getActiveStreamCodec()?.let { 
+                android.util.Log.d("getCurrentCodec", "Active stream found: $it")
+                return it 
+            }
+            
             // Method 1: Developer options settings (most reliable - what user configured)
             getDeveloperOptionsCodec()?.let { 
                 android.util.Log.d("getCurrentCodec", "Developer options found: $it")
@@ -607,30 +613,104 @@ class BluetoothCodecManager(private val context: Context) {
                 return it 
             }
             
-            // Method 6: Device estimation based on known capabilities
+            // Method 6: Enhanced device estimation based on known capabilities
             val deviceName = if (hasBluetoothPermission()) {
                 try { device.name?.lowercase() ?: "" } catch (e: SecurityException) { "" }
             } else ""
             
-            // Smart estimation based on device and phone capabilities
+            // Cross-check device capabilities with phone capabilities
+            val phoneSupportsLdac = checkLdacSupport()
+            val phoneSupportsAptx = isQualcommDevice()
+            
+            // Enhanced device-specific detection with capability validation
             val estimated = when {
-                deviceName.contains("sony") && checkLdacSupport() -> BluetoothCodecs.LDAC
-                deviceName.contains("lg") && deviceName.contains("tone") && isQualcommDevice() -> BluetoothCodecs.APTX_ADAPTIVE
-                deviceName.contains("tone free") && isQualcommDevice() -> BluetoothCodecs.APTX_ADAPTIVE
-                deviceName.contains("t90s") -> BluetoothCodecs.APTX_ADAPTIVE
-                deviceName.contains("airpods") -> BluetoothCodecs.AAC
-                deviceName.contains("beats") -> BluetoothCodecs.AAC
+                // Sony devices with LDAC
+                (deviceName.contains("sony") || deviceName.contains("wh-1000x") || deviceName.contains("wf-1000x")) && phoneSupportsLdac -> BluetoothCodecs.LDAC
+                
+                // LG devices with aptX Adaptive
+                (deviceName.contains("lg") && deviceName.contains("tone") || deviceName.contains("tone free") || deviceName.contains("t90s")) && phoneSupportsAptx -> BluetoothCodecs.APTX_ADAPTIVE
+                
+                // Apple devices prefer AAC
+                (deviceName.contains("airpods") || deviceName.contains("beats")) -> BluetoothCodecs.AAC
+                
+                // Bose typically uses AAC
                 deviceName.contains("bose") -> BluetoothCodecs.AAC
-                isQualcommDevice() -> BluetoothCodecs.APTX
-                else -> "Unknown" // Don't assume SBC
+                
+                // Sennheiser high-end devices
+                deviceName.contains("sennheiser") && deviceName.contains("momentum") && phoneSupportsAptx -> BluetoothCodecs.APTX_HD
+                deviceName.contains("sennheiser") && phoneSupportsAptx -> BluetoothCodecs.APTX
+                
+                // Jabra devices
+                deviceName.contains("jabra") && deviceName.contains("elite") && phoneSupportsAptx -> BluetoothCodecs.APTX
+                
+                // Generic Qualcomm device fallback
+                phoneSupportsAptx -> BluetoothCodecs.APTX
+                
+                // Default to SBC if no better option
+                else -> BluetoothCodecs.SBC
             }
             
-            android.util.Log.d("getCurrentCodec", "Final result: $estimated")
+            android.util.Log.d("getCurrentCodec", "Final result: $estimated (device: '$deviceName', LDAC: $phoneSupportsLdac, aptX: $phoneSupportsAptx)")
             return estimated
             
         } catch (e: Exception) {
             android.util.Log.e("getCurrentCodec", "Exception in codec detection", e)
             "Unknown"
+        }
+    }
+    
+    private fun getActiveStreamCodec(): String? {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            
+            // Only check if music is actively playing
+            if (!audioManager.isMusicActive || !audioManager.isBluetoothA2dpOn) {
+                return null
+            }
+            
+            // Check for active codec parameters during playback
+            val activeCodecParams = listOf(
+                "bt_a2dp_active_codec",
+                "bt_active_codec_type", 
+                "bluetooth_active_codec",
+                "a2dp_current_codec",
+                "bt_a2dp_codec_type"
+            )
+            
+            for (param in activeCodecParams) {
+                val value = audioManager.getParameters(param)
+                if (value.isNotEmpty()) {
+                    val codec = when (value.lowercase()) {
+                        "0", "sbc" -> BluetoothCodecs.SBC
+                        "1", "aac" -> BluetoothCodecs.AAC
+                        "2", "aptx" -> BluetoothCodecs.APTX
+                        "3", "aptx_hd" -> BluetoothCodecs.APTX_HD
+                        "4", "ldac" -> BluetoothCodecs.LDAC
+                        "5", "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
+                        "10", "lc3" -> BluetoothCodecs.LC3
+                        else -> continue
+                    }
+                    android.util.Log.d("getActiveStreamCodec", "Active stream codec: $codec from $param=$value")
+                    return codec
+                }
+            }
+            
+            // Check sample rate for codec hints during active playback
+            val sampleRate = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull() ?: 0
+            return when {
+                sampleRate >= 96000 -> {
+                    android.util.Log.d("getActiveStreamCodec", "High sample rate ($sampleRate Hz) suggests hi-res codec")
+                    if (checkLdacSupport()) BluetoothCodecs.LDAC else BluetoothCodecs.APTX_HD
+                }
+                sampleRate >= 48000 -> {
+                    android.util.Log.d("getActiveStreamCodec", "48kHz suggests aptX or better")
+                    BluetoothCodecs.APTX
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("getActiveStreamCodec", "Exception in active stream detection", e)
+            null
         }
     }
     
@@ -681,7 +761,10 @@ class BluetoothCodecManager(private val context: Context) {
             val methods = arrayOf(
                 "getCodecStatus",
                 "getActiveCodecConfig", 
-                "getCurrentCodecConfig"
+                "getCurrentCodecConfig",
+                "getCodecConfig",
+                "getOptionalCodecsEnabled",
+                "getCodecConfigPreference"
             )
             
             for (methodName in methods) {
@@ -721,8 +804,8 @@ class BluetoothCodecManager(private val context: Context) {
     private fun extractCodecType(codecResult: Any): Int? {
         return try {
             // Try different ways to extract codec type
-            val methods = arrayOf("getCodecType", "getType")
-            val fields = arrayOf("codecType", "mCodecType", "type")
+            val methods = arrayOf("getCodecType", "getType", "getCodecId")
+            val fields = arrayOf("codecType", "mCodecType", "type", "codecId", "mCodecId")
             
             // Try methods first
             for (methodName in methods) {
@@ -756,6 +839,22 @@ class BluetoothCodecManager(private val context: Context) {
                 
                 codecConfig?.let { config ->
                     return extractCodecType(config)
+                }
+            } catch (e: Exception) {
+                // Continue
+            }
+            
+            // Try to parse from toString() if it contains codec information
+            try {
+                val stringRepresentation = codecResult.toString()
+                when {
+                    stringRepresentation.contains("LDAC", ignoreCase = true) -> return 4
+                    stringRepresentation.contains("aptX Adaptive", ignoreCase = true) -> return 5
+                    stringRepresentation.contains("aptX HD", ignoreCase = true) -> return 3
+                    stringRepresentation.contains("aptX", ignoreCase = true) -> return 2
+                    stringRepresentation.contains("AAC", ignoreCase = true) -> return 1
+                    stringRepresentation.contains("LC3", ignoreCase = true) -> return 10
+                    stringRepresentation.contains("SBC", ignoreCase = true) -> return 0
                 }
             } catch (e: Exception) {
                 // Continue
@@ -1253,7 +1352,15 @@ class BluetoothCodecManager(private val context: Context) {
             3 -> BluetoothCodecs.APTX_HD
             4 -> BluetoothCodecs.LDAC
             5 -> BluetoothCodecs.APTX_ADAPTIVE
-            else -> BluetoothCodecs.SBC
+            10 -> BluetoothCodecs.LC3
+            // Additional vendor-specific mappings
+            100 -> BluetoothCodecs.APTX  // Some vendors use 100 for aptX
+            101 -> BluetoothCodecs.APTX_HD  // Some vendors use 101 for aptX HD
+            102 -> BluetoothCodecs.LDAC  // Some vendors use 102 for LDAC
+            else -> {
+                android.util.Log.w("mapCodecTypeToString", "Unknown codec type: $codecType, defaulting to SBC")
+                BluetoothCodecs.SBC
+            }
         }
     }
 

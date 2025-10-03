@@ -168,7 +168,9 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun isDeviceMatch(btDevice: android.bluetooth.BluetoothDevice, audioDevice: AudioDeviceInfo): Boolean {
         return try {
-            val btName = btDevice.name?.lowercase() ?: ""
+            val btName = if (hasBluetoothPermission()) {
+                try { btDevice.name?.lowercase() ?: "" } catch (e: SecurityException) { "" }
+            } else ""
             val audioName = audioDevice.productName.toString().lowercase()
             
             // Enhanced matching logic
@@ -185,8 +187,12 @@ class BluetoothCodecManager(private val context: Context) {
     }
 
     private fun createEnhancedBluetoothDevice(device: android.bluetooth.BluetoothDevice): BluetoothDevice {
+        val deviceName = if (hasBluetoothPermission()) {
+            try { device.name ?: "Unknown Device" } catch (e: SecurityException) { "Unknown Device" }
+        } else "Unknown Device"
+        
         return BluetoothDevice(
-            name = if (hasBluetoothPermission()) device.name ?: "Unknown Device" else "Unknown Device",
+            name = deviceName,
             address = device.address,
             isConnected = true,
             activeCodec = getCurrentCodec(device),
@@ -634,7 +640,10 @@ class BluetoothCodecManager(private val context: Context) {
             if (aptxHdProp == "true") return BluetoothCodecs.APTX_HD
             
             // Check device name for aptX capable devices
-            val deviceName = device.name?.lowercase() ?: ""
+            val deviceName = if (hasBluetoothPermission()) {
+                try { device.name?.lowercase() ?: "" } catch (e: SecurityException) { "" }
+            } else ""
+            
             when {
                 deviceName.contains("aptx") -> return BluetoothCodecs.APTX
                 deviceName.contains("qualcomm") -> return BluetoothCodecs.APTX
@@ -1215,12 +1224,9 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun estimateCodecFromDevice(device: android.bluetooth.BluetoothDevice): String? {
         return try {
-            if (!hasBluetoothPermission()) return null
-            val deviceName = try {
-                device.name?.lowercase() ?: ""
-            } catch (e: SecurityException) {
-                ""
-            }
+            val deviceName = if (hasBluetoothPermission()) {
+                try { device.name?.lowercase() ?: "" } catch (e: SecurityException) { "" }
+            } else ""
             
             // Estimate based on device capabilities and phone chipset
             when {
@@ -1234,7 +1240,7 @@ class BluetoothCodecManager(private val context: Context) {
                 else -> BluetoothCodecs.AAC
             }
         } catch (e: Exception) {
-            null
+            BluetoothCodecs.SBC
         }
     }
 
@@ -1422,16 +1428,18 @@ class BluetoothCodecManager(private val context: Context) {
 
     private fun getDeviceSupportedCodecs(device: android.bluetooth.BluetoothDevice): List<String> {
         return try {
-            if (!hasBluetoothPermission()) return listOf(BluetoothCodecs.SBC)
-            
-            val deviceName = device.name?.lowercase() ?: ""
+            val deviceName = if (hasBluetoothPermission()) {
+                try { device.name?.lowercase() ?: "" } catch (e: SecurityException) { "" }
+            } else ""
             
             // Check device database first
-            DeviceCodecDatabase.getSupportedCodecs(deviceName)?.let { return it }
-            
-            // Check brand-based codecs
-            val brandCodecs = DeviceCodecDatabase.getBrandCodecs(deviceName)
-            if (brandCodecs.isNotEmpty()) return brandCodecs
+            if (deviceName.isNotEmpty()) {
+                DeviceCodecDatabase.getSupportedCodecs(deviceName)?.let { return it }
+                
+                // Check brand-based codecs
+                val brandCodecs = DeviceCodecDatabase.getBrandCodecs(deviceName)
+                if (brandCodecs.isNotEmpty()) return brandCodecs
+            }
             
             // Fallback to SBC only
             listOf(BluetoothCodecs.SBC)

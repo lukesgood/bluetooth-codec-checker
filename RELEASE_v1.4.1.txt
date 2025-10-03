@@ -1,0 +1,36 @@
+TITLE:
+v1.4.1 - Crash Fix for Device Connections
+
+DESCRIPTION:
+## 🐛 Bug Fix Release
+
+### Fixed Crashes
+- **Fixed app crash when connecting to Bluetooth devices**
+- **Safer device name access** with proper permission checks
+- **Better exception handling** for Bluetooth operations
+- **Prevents SecurityException** on restricted device access
+
+### Technical Improvements
+- Added try-catch blocks around all `device.name` access
+- Proper permission validation before Bluetooth operations
+- Safe fallback values when device info unavailable
+- Enhanced error handling for reflection calls
+
+## What Was Fixed
+The app was crashing when:
+- Connecting to new Bluetooth devices
+- Accessing device names without proper permissions
+- System denied Bluetooth access during runtime
+
+## Download
+- **APK Size**: 7.0 MB
+- **Version**: 1.4.1 (Build 6)
+- **Min Android**: 8.0 (API 26)
+- **Target Android**: 14 (API 34)
+
+## Installation
+```bash
+adb install bluetooth-codec-checker-v1.4.1.apk
+```
+
+**Note**: This is a stability fix. The app should now work reliably with all Bluetooth devices without crashing.

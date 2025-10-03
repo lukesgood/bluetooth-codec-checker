@@ -113,28 +113,72 @@ object DeviceCodecDatabase {
         "buds z2" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
         
         // LG
-        "tone free" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
+        "tone free" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        "tone free t90s" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        "tone free t90" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        "tone free fp9" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        "tone free fp8" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
         "tone+" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
         "tone ultra" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
-        "hbs-" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX)
+        "hbs-" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX),
+        "lg tone" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        
+        // Additional LG variations
+        "lg" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        "tone" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        "t90s" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE),
+        "t90" to listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
     )
     
     fun getSupportedCodecs(deviceName: String): List<String>? {
         val normalizedName = deviceName.lowercase()
             .replace("-", " ")
             .replace("_", " ")
+            .replace("(", "")
+            .replace(")", "")
             .trim()
         
-        // Direct match
-        deviceDatabase[normalizedName]?.let { return it }
+        android.util.Log.d("DeviceCodecDB", "Checking device: '$deviceName' -> normalized: '$normalizedName'")
         
-        // Partial match
+        // Direct match first
+        deviceDatabase[normalizedName]?.let { 
+            android.util.Log.d("DeviceCodecDB", "Direct match found: $it")
+            return it 
+        }
+        
+        // Partial match - check if device name contains any key
         for ((key, codecs) in deviceDatabase) {
             if (normalizedName.contains(key) || key.contains(normalizedName)) {
+                android.util.Log.d("DeviceCodecDB", "Partial match '$key' found: $codecs")
                 return codecs
             }
         }
         
+        // Special cases for LG devices - check for any LG/Tone patterns
+        when {
+            normalizedName.contains("tone free") -> {
+                android.util.Log.d("DeviceCodecDB", "Tone Free pattern match")
+                return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
+            }
+            normalizedName.contains("lg") && normalizedName.contains("tone") -> {
+                android.util.Log.d("DeviceCodecDB", "LG Tone pattern match")
+                return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
+            }
+            normalizedName.contains("t90") -> {
+                android.util.Log.d("DeviceCodecDB", "T90 pattern match")
+                return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
+            }
+            normalizedName.contains("lg") -> {
+                android.util.Log.d("DeviceCodecDB", "LG brand match")
+                return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
+            }
+            normalizedName.contains("tone") -> {
+                android.util.Log.d("DeviceCodecDB", "Tone pattern match")
+                return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
+            }
+        }
+        
+        android.util.Log.d("DeviceCodecDB", "No match found for: '$normalizedName'")
         return null
     }
     
@@ -150,7 +194,7 @@ object DeviceCodecDatabase {
             name.contains("jabra") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC)
             name.contains("jbl") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC)
             name.contains("anker") || name.contains("soundcore") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX)
-            name.contains("lg") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX)
+            name.contains("lg") -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
             else -> listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC)
         }
     }

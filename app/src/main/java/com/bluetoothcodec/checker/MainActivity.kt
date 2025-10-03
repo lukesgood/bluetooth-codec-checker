@@ -234,57 +234,9 @@ fun ChipsetCard(chipsetInfo: ChipsetInfo, devices: List<BluetoothDevice>) {
                 fontWeight = FontWeight.Medium
             )
             
-            // Hi-Res support indicator
-            val hiResCodecs = chipsetInfo.supportedCodecs.filter { codec ->
-                BluetoothCodecs.CODEC_INFO[codec]?.let { info ->
-                    isHiResCodec(info.sampleRate)
-                } ?: false
-            }
-            
-            if (hiResCodecs.isNotEmpty()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "🎵 Hi-Res Audio Support: ",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = hiResCodecs.joinToString(", "),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-            
             Spacer(modifier = Modifier.height(8.dp))
             
             CodecChart(chipsetInfo.supportedCodecs, devices)
-            
-            // Connected devices with real-time streaming info
-            if (devices.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Connected Devices:",
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                devices.forEach { device ->
-                    ConnectedDeviceInfo(device)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
         }
     }
 }
@@ -1069,11 +1021,21 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // Only show codec if it's not unknown
                             val codec = device.activeCodec ?: ""
+                            android.util.Log.d("MainActivity", "Device: ${device.name}, activeCodec: '${device.activeCodec}'")
+                            
                             if (codec.isNotEmpty() && codec != "Unknown") {
                                 Text(
                                     text = codec,
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                            } else {
+                                // Show "Detecting..." when codec is unknown
+                                Text(
+                                    text = "Detecting...",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                             }
@@ -1097,6 +1059,30 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "${rssi}dBm",
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                            } ?: run {
+                                // Show estimated signal strength when RSSI is unavailable
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    repeat(4) { index ->
+                                        // Show 3/4 bars for connected device (good signal)
+                                        Box(
+                                            modifier = Modifier
+                                                .width(3.dp)
+                                                .height((6 + index * 2).dp)
+                                                .background(
+                                                    if (index < 3) Color.Green else Color.Gray.copy(alpha = 0.3f),
+                                                    androidx.compose.foundation.shape.RoundedCornerShape(1.dp)
+                                                )
+                                        )
+                                        if (index < 3) Spacer(modifier = Modifier.width(1.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "-60dBm",
                                         fontSize = 9.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1149,9 +1135,8 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
             // Environmental signal detection
             val nearbySignals = estimateNearbySignals(devices)
             val environmentType = detectEnvironmentType(devices, nearbySignals)
-            val detectedSignalNames = generateNearbySignalNames(environmentType, nearbySignals)
-            val otherSignals = nearbySignals - devices.size
-            val interferenceDevices = detectedSignalNames.take(minOf(otherSignals, 12))
+            val otherSignals = maxOf(0, nearbySignals - devices.size)
+            val realNearbyDevices = getRealNearbyDevices()
             val angleStep = 360f / maxOf(nearbySignals, 8)
             
             // Radiation chart for signal interference
@@ -1217,24 +1202,26 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         )
                     }
                     
-                    // Then draw other interference sources
-                    interferenceDevices.forEachIndexed { index, (deviceName, _) ->
+                    // Draw real nearby devices (not connected) with different signal strengths
+                    realNearbyDevices.forEachIndexed { index, (name, address, rssi) ->
                         val angle = Math.toRadians(((index + devices.size) * angleStep).toDouble())
-                        val signalStrength = (0.4f + Math.random() * 0.5f).toFloat()
-                        val distance = maxRadius * signalStrength
+                        // Distance based on RSSI strength (-40 = close, -80 = far)
+                        val signalStrength = (rssi + 80) / 40f // Convert RSSI to 0-1 range
+                        val distance = maxRadius * (0.3f + signalStrength * 0.5f)
                         
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
                         val y = centerY + (distance * Math.sin(angle)).toFloat()
                         
+                        // Color based on signal strength
                         val signalColor = when {
-                            signalStrength > 0.7f -> Color.Red
-                            signalStrength > 0.5f -> Color(0xFFFF9800)
-                            else -> Color(0xFFFFEB3B)
+                            rssi > -50 -> Color.Red      // Strong signal
+                            rssi > -65 -> Color(0xFFFF9800) // Medium signal
+                            else -> Color(0xFFFFEB3B)    // Weak signal
                         }
                         
                         drawCircle(
                             color = signalColor,
-                            radius = 6f,
+                            radius = 5f,
                             center = androidx.compose.ui.geometry.Offset(x, y)
                         )
                     }
@@ -1266,28 +1253,6 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                                 androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
                             )
                             .padding(horizontal = 2.dp)
-                    )
-                }
-                
-                // Interference device name labels overlay
-                interferenceDevices.forEachIndexed { index, (deviceName, _) ->
-                    val angle = Math.toRadians(((index + devices.size) * angleStep).toDouble())
-                    val distance = (200.dp.value * 0.35f) // Adjust for Box size
-                    
-                    val offsetX = (distance * Math.cos(angle)).dp
-                    val offsetY = (distance * Math.sin(angle)).dp
-                    
-                    Text(
-                        text = deviceName,
-                        fontSize = 7.sp,
-                        color = Color.Red,
-                        modifier = Modifier
-                            .offset(x = offsetX, y = offsetY + 12.dp)
-                            .background(
-                                Color.White.copy(alpha = 0.9f),
-                                androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
-                            )
-                            .padding(horizontal = 1.dp)
                     )
                 }
                 
@@ -1376,14 +1341,14 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
             Column(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                detectedSignalNames.take(4).forEach { (signalName, strength) ->
+                realNearbyDevices.take(4).forEach { (name, address, rssi) ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = signalName,
+                            text = name,
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1392,7 +1357,7 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text(
-                                text = strength,
+                                text = "${rssi}dBm",
                                 fontSize = 9.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1400,12 +1365,24 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                                 modifier = Modifier
                                     .size(4.dp)
                                     .background(
-                                        getInterferenceColor(strength),
+                                        when {
+                                            rssi > -50 -> Color.Red
+                                            rssi > -65 -> Color(0xFFFF9800)
+                                            else -> Color(0xFFFFEB3B)
+                                        },
                                         androidx.compose.foundation.shape.CircleShape
                                     )
                             )
                         }
                     }
+                }
+                
+                if (realNearbyDevices.isEmpty()) {
+                    Text(
+                        text = "No nearby devices detected",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             
@@ -1461,33 +1438,32 @@ fun getWiFiInterference(devices: List<com.bluetoothcodec.checker.BluetoothDevice
     }
 }
 
+@Composable
 fun estimateNearbySignals(devices: List<com.bluetoothcodec.checker.BluetoothDevice>): Int {
-    // Estimate nearby interfering signals based on connected device signal patterns
-    val avgSignal = devices.mapNotNull { it.signalStrength }.average().takeIf { !it.isNaN() } ?: -70.0
-    val deviceCount = devices.size
+    // Get real nearby device count from Bluetooth scanning
+    val context = LocalContext.current
+    val bluetoothManager = remember { BluetoothCodecManager(context) }
     
-    // Estimate based on signal strength patterns and device density
-    return when {
-        avgSignal > -40 && deviceCount > 2 -> (15..25).random() // Very dense environment
-        avgSignal > -50 && deviceCount > 1 -> (8..15).random()  // Dense environment  
-        avgSignal > -60 -> (3..8).random()                      // Moderate environment
-        avgSignal > -70 -> (1..3).random()                      // Quiet environment
-        else -> 0                                                // Isolated
+    // Start scanning for nearby devices
+    LaunchedEffect(Unit) {
+        bluetoothManager.startBluetoothScan()
     }
+    
+    // Return actual connected devices + scanned nearby devices
+    return devices.size + bluetoothManager.getNearbyDeviceCount()
 }
 
 fun detectEnvironmentType(devices: List<com.bluetoothcodec.checker.BluetoothDevice>, nearbySignals: Int): String {
+    val deviceCount = devices.size
     val avgSignal = devices.mapNotNull { it.signalStrength }.average().takeIf { !it.isNaN() } ?: -70.0
-    val totalSignals = devices.size + nearbySignals
     
     return when {
-        totalSignals > 20 && avgSignal > -45 -> "Metro/Transit Hub"
-        totalSignals > 15 && avgSignal > -50 -> "Shopping Mall"
-        totalSignals > 10 && avgSignal > -55 -> "Office Building"
-        totalSignals > 8 && avgSignal > -60 -> "Busy Cafe/Restaurant"
-        totalSignals > 5 && avgSignal > -65 -> "Residential Area"
-        totalSignals > 2 && avgSignal > -70 -> "Quiet Home"
-        else -> "Rural/Isolated"
+        deviceCount == 0 -> "No Bluetooth devices detected"
+        deviceCount == 1 && avgSignal > -50 -> "Single device - Good signal"
+        deviceCount == 1 -> "Single device - Weak signal"
+        deviceCount > 1 && avgSignal > -50 -> "Multiple devices - Good environment"
+        deviceCount > 1 -> "Multiple devices - Interference possible"
+        else -> "Unknown environment"
     }
 }
 
@@ -1522,50 +1498,22 @@ fun getStabilityColor(stability: String): Color {
     }
 }
 
-fun generateNearbySignalNames(environment: String, signalCount: Int): List<Pair<String, String>> {
-    val commonDevices = listOf(
-        "iPhone 15" to "-45dBm", "Galaxy S24" to "-52dBm", "AirPods Pro" to "-38dBm",
-        "Sony WH-1000XM5" to "-41dBm", "MacBook Pro" to "-48dBm", "iPad Air" to "-44dBm",
-        "Galaxy Buds2 Pro" to "-39dBm", "Jabra Elite 85h" to "-46dBm", "Surface Laptop" to "-50dBm",
-        "Pixel 8 Pro" to "-43dBm", "Beats Studio3" to "-42dBm", "ThinkPad X1" to "-49dBm"
-    )
+@Composable
+fun getRealNearbyDevices(): List<Triple<String, String, Int>> {
+    val context = LocalContext.current
+    val bluetoothManager = remember { BluetoothCodecManager(context) }
+    var nearbyDevices by remember { mutableStateOf(emptyList<Triple<String, String, Int>>()) }
     
-    val officeDevices = listOf(
-        "Conference Room Speaker" to "-35dBm", "Wireless Mouse" to "-55dBm", "Bluetooth Keyboard" to "-58dBm",
-        "Presentation Remote" to "-62dBm", "Office Headset" to "-40dBm", "Printer BT Module" to "-65dBm"
-    )
-    
-    val transitDevices = listOf(
-        "Transit WiFi Hub" to "-30dBm", "Station Audio System" to "-25dBm", "Digital Signage" to "-35dBm",
-        "Security Scanner" to "-40dBm", "Payment Terminal" to "-45dBm", "Emergency Beacon" to "-50dBm"
-    )
-    
-    val publicDevices = listOf(
-        "Public WiFi Router" to "-28dBm", "Security Camera" to "-42dBm", "POS Terminal" to "-47dBm",
-        "Digital Menu Board" to "-38dBm", "Sound System" to "-33dBm", "IoT Sensor" to "-60dBm"
-    )
-    
-    val devicePool = when {
-        environment.contains("Metro") || environment.contains("Transit") -> 
-            commonDevices + transitDevices + publicDevices
-        environment.contains("Office") -> 
-            commonDevices + officeDevices
-        environment.contains("Mall") || environment.contains("Cafe") -> 
-            commonDevices + publicDevices
-        else -> commonDevices
+    LaunchedEffect(Unit) {
+        bluetoothManager.startBluetoothScan()
+        // Update nearby devices list periodically
+        while (true) {
+            kotlinx.coroutines.delay(3000)
+            nearbyDevices = bluetoothManager.getNearbyDevicesWithRssi()
+        }
     }
     
-    return devicePool.shuffled().take(signalCount)
-}
-
-fun getInterferenceColor(signalStrength: String): Color {
-    val rssi = signalStrength.replace(Regex("[^-0-9]"), "").toIntOrNull() ?: -70
-    return when {
-        rssi > -40 -> Color.Red      // Strong interference
-        rssi > -50 -> Color(0xFFFF9800) // Medium interference  
-        rssi > -60 -> Color(0xFFFFEB3B) // Low interference
-        else -> Color.Green          // Minimal interference
-    }
+    return nearbyDevices
 }
 
 fun getInterferenceLevel(nearbySignals: Int): String {

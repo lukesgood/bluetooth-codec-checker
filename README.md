@@ -38,14 +38,14 @@ A comprehensive Android app for detecting and analyzing Bluetooth audio codecs, 
 
 | Codec | Quality | Latency | Sample Rate | Bitrate |
 |-------|---------|---------|-------------|---------|
-| **LDAC** | Premium | 150ms | 48-96 kHz | 330-990 kbps |
+| **LDAC** | Premium | 150-200ms | 48-96 kHz | 330-990 kbps |
 | **aptX HD** | High | 130ms | 48 kHz | 576 kbps |
-| **aptX Adaptive** | High | 80ms | 48-96 kHz | 279-420 kbps |
+| **aptX Adaptive** | High | 50-80ms | 48-96 kHz | 279-420 kbps |
 | **aptX** | Good | 40ms | 48 kHz | 352 kbps |
-| **aptX LL** | Good | 20ms | 48 kHz | 352 kbps |
-| **AAC** | Good | 80ms | 44.1 kHz | 256 kbps |
-| **LC3** | Basic | 20ms | 48 kHz | 160 kbps |
-| **SBC** | Basic | 200ms | 44.1 kHz | 328 kbps |
+| **aptX LL** | Good | 32-40ms | 48 kHz | 352 kbps |
+| **AAC** | Good | 40-150ms | 44.1 kHz | 256 kbps |
+| **LC3** | Basic | 20-30ms | 48 kHz | 160 kbps |
+| **SBC** | Basic | 40-200ms | 44.1 kHz | 328 kbps |
 
 ## Device Support
 
@@ -64,6 +64,13 @@ A comprehensive Android app for detecting and analyzing Bluetooth audio codecs, 
 - **Sennheiser**: Momentum series
 
 ## Installation
+
+### Latest Release (v1.4)
+```bash
+# Download and install
+wget https://github.com/user/bluetooth-codec-checker/releases/download/v1.4/bluetooth-codec-checker-v1.4.apk
+adb install bluetooth-codec-checker-v1.4.apk
+```
 
 ### Debug Build
 ```bash
@@ -96,7 +103,7 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 ### Detection Methods
 1. **Bluetooth A2DP Profile** reflection
 2. **AudioManager** codec configuration
-3. **Logcat parsing** for real-time data
+3. **System properties** for codec support
 4. **Device-specific estimation** based on known capabilities
 
 ### Data Sources
@@ -108,12 +115,12 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 ## Version History
 
 ### v1.4 (Current)
-- **Comprehensive codec detection** with 12 different OS-level methods
+- **Multiple codec detection methods** using Android APIs and reflection
 - **LG device support** added to codec database
-- **Enhanced detection accuracy** covering all Android versions and OEMs
-- **New detection methods**: Media Metrics, HCI, Vendor Properties, Audio Policy, Bluetooth Stack, Kernel Logs
-- **Fixed SBC fallback issue** for aptX-capable devices
-- **Improved reliability** for codec identification across different manufacturers
+- **Improved detection reliability** for supported Android versions
+- **Additional detection methods**: Media Metrics, HCI logs, Vendor Properties, Audio Policy
+- **Better SBC fallback handling** for unsupported codecs
+- **Enhanced compatibility** across different manufacturers
 
 ### v1.3
 - Enhanced UI with repositioned battery and signal indicators

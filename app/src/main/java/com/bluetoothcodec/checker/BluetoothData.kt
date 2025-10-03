@@ -43,43 +43,43 @@ object BluetoothCodecs {
     
     val CODEC_INFO = mapOf(
         SBC to CodecInfo(
-            SBC, quality = 0.1f, speed = 0.9f,
-            bitrate = "328 kbps", sampleRate = "44.1 kHz", latency = "~40ms",
+            SBC, quality = 0.3f, speed = 0.7f,
+            bitrate = "328 kbps", sampleRate = "44.1 kHz", latency = "40-200ms",
             description = "Basic codec, supported by all devices"
         ),
         AAC to CodecInfo(
-            AAC, quality = 0.4f, speed = 0.7f,
-            bitrate = "320 kbps", sampleRate = "44.1 kHz", latency = "~80ms",
+            AAC, quality = 0.6f, speed = 0.6f,
+            bitrate = "256 kbps", sampleRate = "44.1 kHz", latency = "40-150ms",
             description = "Apple optimized, efficient compression"
         ),
         APTX to CodecInfo(
-            APTX, quality = 0.6f, speed = 0.8f,
-            bitrate = "352 kbps", sampleRate = "48 kHz", latency = "~40ms",
+            APTX, quality = 0.7f, speed = 0.8f,
+            bitrate = "352 kbps", sampleRate = "48 kHz", latency = "40ms",
             description = "Qualcomm developed, low latency"
         ),
         APTX_HD to CodecInfo(
             APTX_HD, quality = 0.8f, speed = 0.5f,
-            bitrate = "576 kbps", sampleRate = "48 kHz", latency = "~130ms",
+            bitrate = "576 kbps", sampleRate = "48 kHz", latency = "130ms",
             description = "High quality version, 24-bit support"
         ),
         APTX_LL to CodecInfo(
-            APTX_LL, quality = 0.6f, speed = 0.95f,
-            bitrate = "352 kbps", sampleRate = "48 kHz", latency = "~32ms",
+            APTX_LL, quality = 0.7f, speed = 0.9f,
+            bitrate = "352 kbps", sampleRate = "48 kHz", latency = "32-40ms",
             description = "Low latency version, gaming optimized"
         ),
         APTX_ADAPTIVE to CodecInfo(
-            APTX_ADAPTIVE, quality = 0.7f, speed = 0.6f,
+            APTX_ADAPTIVE, quality = 0.8f, speed = 0.7f,
             bitrate = "279-420 kbps", sampleRate = "48-96 kHz", latency = "50-80ms",
             description = "Adaptive bitrate, optimized by situation"
         ),
         LDAC to CodecInfo(
-            LDAC, quality = 0.95f, speed = 0.2f,
-            bitrate = "330-990 kbps", sampleRate = "96 kHz", latency = "~200ms",
+            LDAC, quality = 0.9f, speed = 0.3f,
+            bitrate = "330-990 kbps", sampleRate = "48-96 kHz", latency = "150-200ms",
             description = "Sony developed, highest quality"
         ),
         LC3 to CodecInfo(
-            LC3, quality = 0.5f, speed = 0.85f,
-            bitrate = "160 kbps", sampleRate = "48 kHz", latency = "~20ms",
+            LC3, quality = 0.6f, speed = 0.8f,
+            bitrate = "160 kbps", sampleRate = "48 kHz", latency = "20-30ms",
             description = "Next-gen standard, low power"
         )
     )

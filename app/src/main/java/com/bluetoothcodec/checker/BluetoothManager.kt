@@ -257,30 +257,7 @@ class BluetoothCodecManager(private val context: Context) {
     }
 
     private fun getConnectionQualityRSSI(device: android.bluetooth.BluetoothDevice): Int? {
-        return try {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            
-            // Analyze connection quality indicators
-            val isA2dpActive = audioManager.isBluetoothA2dpOn
-            val isMusicActive = audioManager.isMusicActive
-            
-            when {
-                isA2dpActive && isMusicActive -> {
-                    // High quality connection - estimate strong signal
-                    (-45..-35).random()
-                }
-                isA2dpActive -> {
-                    // Connected but not streaming - medium signal
-                    (-65..-45).random()
-                }
-                else -> {
-                    // Weak connection
-                    (-85..-65).random()
-                }
-            }
-        } catch (e: Exception) {
-            null
-        }
+        return null // Only return real RSSI values, no estimation
     }
 
     private val signalHistory = mutableMapOf<String, MutableList<Pair<Long, Int>>>()
@@ -1444,8 +1421,23 @@ class BluetoothCodecManager(private val context: Context) {
     }
 
     private fun getDeviceSupportedCodecs(device: android.bluetooth.BluetoothDevice): List<String> {
-        // Only return SBC - the only codec guaranteed for all Bluetooth A2DP devices
-        return listOf("SBC")
+        return try {
+            if (!hasBluetoothPermission()) return listOf(BluetoothCodecs.SBC)
+            
+            val deviceName = device.name?.lowercase() ?: ""
+            
+            // Check device database first
+            DeviceCodecDatabase.getSupportedCodecs(deviceName)?.let { return it }
+            
+            // Check brand-based codecs
+            val brandCodecs = DeviceCodecDatabase.getBrandCodecs(deviceName)
+            if (brandCodecs.isNotEmpty()) return brandCodecs
+            
+            // Fallback to SBC only
+            listOf(BluetoothCodecs.SBC)
+        } catch (e: Exception) {
+            listOf(BluetoothCodecs.SBC)
+        }
     }
             
     
@@ -1710,21 +1702,7 @@ class BluetoothCodecManager(private val context: Context) {
                 // Property access failed
             }
             
-            // Method 6: Try connection state and estimate RSSI based on connection quality
-            try {
-                val a2dpState = a2dpProfile?.getConnectionState(device) ?: BluetoothProfile.STATE_DISCONNECTED
-                if (a2dpState == BluetoothProfile.STATE_CONNECTED) {
-                    // If connected, provide a dynamic RSSI based on time for real-time effect
-                    val timeVariation = (System.currentTimeMillis() / 5000) % 20 // Changes every 5 seconds
-                    val baseRssi = -45 - (Math.abs(device.address.hashCode()) % 30) // -45 to -75
-                    val dynamicRssi = baseRssi - (timeVariation.toInt() / 2) // Add some variation
-                    return dynamicRssi.coerceIn(-85, -35)
-                }
-            } catch (e: Exception) {
-                // Connection check failed
-            }
-            
-            // Fallback: Return null to show "Connected" instead
+            // Method 6: Return null if no real RSSI available
             null
             
         } catch (e: Exception) {

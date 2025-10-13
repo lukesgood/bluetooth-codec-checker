@@ -581,77 +581,22 @@ class BluetoothCodecManager(private val context: Context) {
                 return "Unknown"
             }
             
-            android.util.Log.d("getCurrentCodec", "Starting codec detection for device: ${device.address}")
+            android.util.Log.d("getCurrentCodec", "Starting OS-Level codec detection for device: ${device.address}")
             
-            // Method 0: Active stream analysis (most accurate during playback)
-            getActiveStreamCodec()?.let { 
-                android.util.Log.d("getCurrentCodec", "Active stream found: $it")
-                return it 
+            // Use only OS-Level Detection (most accurate method)
+            val osResult = getOSLevelCodec(device)
+            android.util.Log.d("CodecTest", "OS-Level Detection: ${osResult ?: "null"}")
+            
+            if (osResult != null) {
+                android.util.Log.d("getCurrentCodec", "OS-level detection found: $osResult")
+                android.util.Log.d("CodecTest", "=== FINAL RESULT: $osResult ===")
+                return osResult 
             }
             
-            // Method 1: Developer options settings (most reliable - what user configured)
-            getDeveloperOptionsCodec()?.let { 
-                android.util.Log.d("getCurrentCodec", "Developer options found: $it")
-                return it 
-            }
-            
-            // Method 2: OS-level codec detection (runtime - might show fallback)
-            getOSLevelCodec(device)?.let { 
-                android.util.Log.d("getCurrentCodec", "OS-level detection found: $it")
-                return it 
-            }
-            
-            // Method 4: Audio manager parameters (OS level)
-            getCodecFromAudioRouting()?.let { 
-                android.util.Log.d("getCurrentCodec", "Audio routing found: $it")
-                return it 
-            }
-            
-            // Method 5: System properties (fallback)
-            getCurrentCodecFromSystemProps()?.let { 
-                android.util.Log.d("getCurrentCodec", "System props found: $it")
-                return it 
-            }
-            
-            // Method 6: Enhanced device estimation based on known capabilities
-            val deviceName = if (hasBluetoothPermission()) {
-                try { device.name?.lowercase() ?: "" } catch (e: SecurityException) { "" }
-            } else ""
-            
-            // Cross-check device capabilities with phone capabilities
-            val phoneSupportsLdac = checkLdacSupport()
-            val phoneSupportsAptx = isQualcommDevice()
-            
-            // Enhanced device-specific detection with capability validation
-            val estimated = when {
-                // Sony devices with LDAC
-                (deviceName.contains("sony") || deviceName.contains("wh-1000x") || deviceName.contains("wf-1000x")) && phoneSupportsLdac -> BluetoothCodecs.LDAC
-                
-                // LG devices with aptX Adaptive
-                (deviceName.contains("lg") && deviceName.contains("tone") || deviceName.contains("tone free") || deviceName.contains("t90s")) && phoneSupportsAptx -> BluetoothCodecs.APTX_ADAPTIVE
-                
-                // Apple devices prefer AAC
-                (deviceName.contains("airpods") || deviceName.contains("beats")) -> BluetoothCodecs.AAC
-                
-                // Bose typically uses AAC
-                deviceName.contains("bose") -> BluetoothCodecs.AAC
-                
-                // Sennheiser high-end devices
-                deviceName.contains("sennheiser") && deviceName.contains("momentum") && phoneSupportsAptx -> BluetoothCodecs.APTX_HD
-                deviceName.contains("sennheiser") && phoneSupportsAptx -> BluetoothCodecs.APTX
-                
-                // Jabra devices
-                deviceName.contains("jabra") && deviceName.contains("elite") && phoneSupportsAptx -> BluetoothCodecs.APTX
-                
-                // Generic Qualcomm device fallback
-                phoneSupportsAptx -> BluetoothCodecs.APTX
-                
-                // Default to SBC if no better option
-                else -> BluetoothCodecs.SBC
-            }
-            
-            android.util.Log.d("getCurrentCodec", "Final result: $estimated (device: '$deviceName', LDAC: $phoneSupportsLdac, aptX: $phoneSupportsAptx)")
-            return estimated
+            // If OS-level detection fails, return SBC as fallback (always supported)
+            android.util.Log.d("getCurrentCodec", "OS-level detection failed, falling back to SBC")
+            android.util.Log.d("CodecTest", "=== FINAL RESULT: SBC (fallback) ===")
+            return BluetoothCodecs.SBC
             
         } catch (e: Exception) {
             android.util.Log.e("getCurrentCodec", "Exception in codec detection", e)

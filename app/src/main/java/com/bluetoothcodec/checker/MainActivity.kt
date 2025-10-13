@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -90,31 +91,6 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // App Header with Version
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Bluetooth Codec Checker",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = "v1.5",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
         if (!hasPermission) {
             PermissionCard(onRequestPermissions)
         } else {
@@ -130,6 +106,18 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
 
                 item {
                     BluetoothCongestionCard(devices)
+                }
+                
+                // Version info at bottom
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "v1.6",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }

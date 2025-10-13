@@ -1,58 +1,37 @@
-# Bluetooth Codec Checker v1.6 - Enhanced Detection Accuracy
+TITLE:
+v1.6 - Enhanced Codec Detection Accuracy with OS-Level Detection Only
 
-## 🎯 Major Improvements
+DESCRIPTION:
+## 🎯 Accuracy & Performance Release
 
-### Enhanced Codec Detection Accuracy
-- **Active Stream Detection**: New real-time codec detection during audio playback
-- **Improved OS-Level Detection**: 3 additional Android API reflection methods
-- **Better Codec Extraction**: Enhanced parsing with string fallback analysis
-- **Extended Codec Support**: Added LC3 and vendor-specific codec mappings
+### Enhanced Detection Method
+- **Simplified codec detection** to use only OS-Level Detection method
+- **Removed unreliable detection methods** (Active Stream, Developer Options, Device Estimation)
+- **Improved accuracy** based on real device testing results with actual Bluetooth devices
+- **Faster execution** with single, proven detection method
 
-### Detection Method Priority (6 Methods)
-1. **Active Stream Analysis** - Most accurate during playback
-2. **Developer Options** - User configured preference  
-3. **OS-Level Detection** - Runtime negotiated codec
-4. **Audio Manager Parameters** - System level detection
-5. **System Properties** - Vendor specific properties
-6. **Enhanced Device Estimation** - Intelligent fallback with capability validation
+### Technical Improvements
+- **Cleaner logging** and error handling for better debugging
+- **Reduced code complexity** by removing 60+ lines of unreliable detection code
+- **Consistent results** based on actual Bluetooth A2DP profile data
+- **Better fallback handling** to SBC when detection fails
 
-### Device Recognition Improvements
-- Enhanced Sony device detection (WH-1000X, WF-1000X series)
-- Better Sennheiser Momentum series recognition
-- Improved Jabra Elite series detection
-- Cross-validation between device and phone capabilities
+### Proven Results
+Based on real device testing with:
+- **LDAC** detection at 96kHz/32-bit (1MORE SonoFlow)
+- **aptX Adaptive** detection at 48kHz/24-bit (LG TONE-T90S)
+- **AAC** detection at 44.1kHz/16-bit (LukeSonata)
+- **aptX** detection at 44.1kHz/16-bit (Jabra Elite)
 
-## 🔧 Technical Enhancements
+## Download
+- **APK Size**: 7.0 MB
+- **Version**: 1.6 (Build 8)
+- **Min Android**: 8.0 (API 26)
+- **Target Android**: 14 (API 34)
 
-### Active Stream Codec Detection
-- Monitors 5 active codec parameters during playback
-- Sample rate analysis (96kHz+ = LDAC/aptX HD, 48kHz = aptX)
-- Only activates during music playback for accuracy
+## Installation
+```bash
+adb install bluetooth-codec-checker-v1.6.apk
+```
 
-### Improved Reflection Methods
-- Added `getCodecConfig`, `getOptionalCodecsEnabled`, `getCodecConfigPreference`
-- Better codec type extraction with additional field names
-- String parsing fallback for codec identification
-
-### Enhanced Codec Mapping
-- LC3 codec support (type 10)
-- Vendor-specific mappings (100=aptX, 101=aptX HD, 102=LDAC)
-- Better error handling and logging
-
-## 📱 Compatibility
-- Based on stable v1.5 codebase
-- Maintains all existing functionality
-- Improved logging for debugging
-- Better fallback to SBC instead of "Unknown"
-
-## 🚀 Key Benefits
-- **Real-time accuracy** during audio playback
-- **Better Android API integration** with more reflection methods
-- **Smarter device recognition** with capability cross-checking
-- **Enhanced debugging** with detailed logging
-- **Improved reliability** with multiple detection fallbacks
-
----
-**Installation**: Install bluetooth-codec-checker-v1.6.apk
-**Size**: ~7.2MB
-**Requirements**: Android 8.0+ (API 26+)
+**Note**: This version focuses on accuracy over feature quantity. Uses the same detection method that successfully identifies real codec usage in Android system logs.

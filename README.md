@@ -1,6 +1,6 @@
 # Bluetooth Codec Checker (BCC)
 
-A comprehensive Android app for detecting and analyzing Bluetooth audio codecs, device information, and connection quality.
+A comprehensive Android app for detecting and analyzing Bluetooth audio codecs, device information, and connection quality with advanced interference analysis.
 
 ## Features
 
@@ -9,27 +9,32 @@ A comprehensive Android app for detecting and analyzing Bluetooth audio codecs, 
 - **Comprehensive codec support**: SBC, AAC, aptX, aptX HD, aptX LL, aptX Adaptive, LDAC, LC3
 - **Hi-Res audio identification** with quality indicators
 - **Visual codec chart** showing quality vs latency mapping
+- **OS-Level detection method** for improved accuracy
 
 ### 📱 Device Information
 - **Chipset detection** with manufacturer and model information
 - **OS version** and Android version display
 - **Supported codec list** based on device capabilities
 - **Hi-Res audio support** indicators
+- **Enhanced device name recognition** with manufacturer database
 
 ### 🔗 Connection Analysis
-- **Signal strength** monitoring with distance estimation
-- **Battery level** tracking for connected devices
+- **Signal strength monitoring** with distance estimation
+- **Battery level tracking** for connected devices
 - **Location estimation** based on RSSI values
 - **Device type identification** with detailed model information
+- **Real-time interference analysis** with risk assessment
 
 ### 📊 Visual Interface
-- **Interactive codec chart** with quality vs latency positioning
+- **Interactive radar chart** with interference risk zones
 - **Real-time refresh** with manual and automatic updates
 - **Material Design 3** UI with modern styling
 - **Responsive layout** for phones and tablets
+- **Color-coded interference levels** (High/Medium/Low Risk)
 
 ### 🔧 Technical Features
-- **Multiple detection methods**: Reflection API, logcat parsing, device estimation
+- **Enhanced Bluetooth scanning** with BLE and Classic discovery
+- **Manufacturer OUI database** for device identification
 - **Permission handling** with proper security checks
 - **Auto-refresh** every 5 seconds
 - **Comprehensive device database** with known codec capabilities
@@ -55,21 +60,25 @@ A comprehensive Android app for detecting and analyzing Bluetooth audio codecs, 
 - **Samsung Exynos** series
 - **Google Tensor** series
 
-### Brand Recognition
+### Manufacturer Recognition
+- **Apple**: AirPods with AAC optimization
 - **Sony**: WH/WF series with LDAC support
 - **Jabra**: Elite series with aptX support
-- **Apple**: AirPods with AAC optimization
-- **Beats**: Studio/Solo series
 - **Bose**: QuietComfort series
+- **Beats**: Studio/Solo series
 - **Sennheiser**: Momentum series
+- **JBL**: Speakers and headphones
+- **LG**: Audio devices
+- **Samsung**: Galaxy Buds series
+- **Plantronics**: Professional headsets
 
 ## Installation
 
-### Latest Release (v1.6)
+### Latest Release (v1.7.2)
 ```bash
 # Download and install
-wget https://github.com/user/bluetooth-codec-checker/releases/download/v1.6/bluetooth-codec-checker-v1.6.apk
-adb install bluetooth-codec-checker-v1.6.apk
+wget https://github.com/lukesgood/bluetooth-codec-checker/releases/download/v1.7.2/bluetooth-codec-checker-v1.7.2.apk
+adb install bluetooth-codec-checker-v1.7.2.apk
 ```
 
 ### Debug Build
@@ -98,62 +107,69 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 - **MVVM pattern** with Compose UI
 - **Kotlin Coroutines** for async operations
 - **Material Design 3** components
-- **Reflection API** for advanced codec detection
+- **Enhanced Bluetooth APIs** for comprehensive detection
 
 ### Detection Methods
-1. **Bluetooth A2DP Profile** reflection
+1. **OS-Level Detection** (Primary method for accuracy)
 2. **AudioManager** codec configuration
 3. **System properties** for codec support
-4. **Device-specific estimation** based on known capabilities
+4. **Device-specific estimation** based on manufacturer database
 
-### Data Sources
-- Android Bluetooth APIs
-- System audio configuration
-- Device manufacturer databases
-- Real-time connection monitoring
+### Interference Analysis
+- **Dual scanning** (BLE + Classic Bluetooth)
+- **RSSI-based positioning** on radar chart
+- **Color-coded risk levels** (Red/Orange/Yellow for High/Medium/Low risk)
+- **Real-time device discovery** with manufacturer identification
 
 ## Version History
 
-### v1.6 (Current)
+### v1.7.2 (Current)
+- **Fixed radar chart positioning** - weak signals now appear farther from center
+- **Corrected proximity representation** for interference analysis
+- **Improved visual accuracy** of signal strength mapping
+
+### v1.7.1
+- **Clarified interference color logic** throughout the app
+- **Enhanced legend** with High/Medium/Low Risk indicators
+- **Consistent color meaning** for interference analysis
+
+### v1.7
+- **Enhanced interference source naming** with manufacturer recognition
+- **Added manufacturer OUI database** for 10+ major brands
+- **Improved device type inference** from MAC address patterns
+- **Enhanced Bluetooth scanning** with dual BLE/Classic discovery
+- **Better fallback naming** instead of "Unknown Device"
+
+### v1.6
 - **Simplified codec detection** to use only OS-Level Detection method
-- **Removed unreliable detection methods** (Active Stream, Developer Options, Device Estimation)
-- **Improved accuracy** based on real device testing results
+- **Removed unreliable detection methods** for improved accuracy
 - **Faster execution** with single detection method
 - **Cleaner logging** and error handling
 
 ### v1.5
-- **Eliminated all fake RSSI generation** and simulated device data
-- **Fixed crash caused by invalid RSSI range** (-40..-80 corrected to -80..-40)
-- **Removed duplicate device info** from Device Information panel
-- **Deleted Hi-Res audio codec information text**
+- **Eliminated fake RSSI generation** and simulated device data
+- **Fixed crash caused by invalid RSSI range**
 - **Added real nearby device detection** with differentiated signal strengths
-- **Show actual RSSI values** with color-coded strength indicators
 - **Clean radar chart** showing only genuine Bluetooth connections
 
 ### v1.4
 - **Multiple codec detection methods** using Android APIs and reflection
 - **LG device support** added to codec database
 - **Improved detection reliability** for supported Android versions
-- **Additional detection methods**: Media Metrics, HCI logs, Vendor Properties, Audio Policy
-- **Better SBC fallback handling** for unsupported codecs
 - **Enhanced compatibility** across different manufacturers
 
 ### v1.3
 - Enhanced UI with repositioned battery and signal indicators
-- Professional green/gray dot codec indicators (replaced emoji)
+- Professional green/gray dot codec indicators
 - Manufacturer name detection for 20+ major audio brands
 - Bluetooth signal congestion analysis with radiation charts
-- Environmental interference monitoring (metro, office, mall, residential)
-- Improved codec chart positioning with collision detection
-- Fixed streaming indicator logic for single active codec
-- Optimized APK size and performance
+- Environmental interference monitoring
 
 ### v1.2
 - Enhanced codec detection accuracy
 - Improved UI with codec chart visualization
 - Added device location estimation
 - Better permission handling
-- Real-time refresh functionality
 
 ### v1.1
 - Added chipset detection
@@ -164,6 +180,26 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 - Initial release
 - Basic codec detection
 - Simple device listing
+
+## Interference Analysis Features
+
+### Color-Coded Risk System
+- 🔴 **Red**: Close devices (High interference risk)
+- 🟠 **Orange**: Medium distance (Medium interference)
+- 🟡 **Yellow**: Far devices (Low interference risk)
+- 🟢 **Green**: Connected devices (No interference)
+
+### Radar Chart
+- **Interactive visualization** of nearby Bluetooth devices
+- **Distance-based positioning** (closer = stronger signal)
+- **Real-time updates** every 5 seconds
+- **Interference risk zones** with color coding
+
+### Device Recognition
+- **Manufacturer identification** from MAC address OUI
+- **Device type inference** (Audio Device, Phone/Tablet, Laptop/PC)
+- **Signal strength monitoring** with RSSI values
+- **Meaningful device names** instead of "Unknown Device"
 
 ## Build Requirements
 
@@ -176,12 +212,13 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 
 ## Contributing
 
-The app uses advanced Android APIs and reflection to detect codec information. Contributions are welcome for:
+The app uses advanced Android APIs and enhanced Bluetooth scanning for comprehensive codec and interference analysis. Contributions are welcome for:
 - Additional device support
 - Improved codec detection methods
-- UI/UX enhancements
+- Enhanced interference analysis
+- UI/UX improvements
 - Performance optimizations
 
 ## License
 
-This project is for educational and research purposes. Please respect device manufacturer APIs and user privacy when using codec detection features.
+This project is for educational and research purposes. Please respect device manufacturer APIs and user privacy when using codec detection and interference analysis features.

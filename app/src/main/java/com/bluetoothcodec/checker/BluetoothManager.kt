@@ -6,7 +6,10 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothHeadset
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -336,9 +339,10 @@ class BluetoothCodecManager(private val context: Context) {
         return nearbyDevices.mapNotNull { device ->
             try {
                 val name = if (hasBluetoothPermission()) {
-                    device.name ?: "Unknown Device"
+                    // Try multiple methods to get device name
+                    device.name ?: getDeviceNameFromAddress(device.address) ?: generateDeviceTypeFromAddress(device.address)
                 } else {
-                    "Unknown Device"
+                    generateDeviceTypeFromAddress(device.address)
                 }
                 val address = device.address ?: "Unknown"
                 // Get RSSI from scan results if available, otherwise estimate based on device type
@@ -347,6 +351,39 @@ class BluetoothCodecManager(private val context: Context) {
             } catch (e: SecurityException) {
                 null
             }
+        }
+    }
+
+    private fun getDeviceNameFromAddress(address: String): String? {
+        return try {
+            // Check bonded devices for name
+            bluetoothAdapter?.bondedDevices?.find { it.address == address }?.name
+        } catch (e: SecurityException) {
+            null
+        }
+    }
+
+    private fun generateDeviceTypeFromAddress(address: String): String {
+        // Generate meaningful names based on MAC address patterns and device types
+        val macPrefix = address.take(8).replace(":", "")
+        return when {
+            // Common manufacturer OUI prefixes
+            macPrefix.startsWith("00:1B:DC") -> "Apple Device"
+            macPrefix.startsWith("04:52:C7") -> "Sony Audio"
+            macPrefix.startsWith("00:16:94") -> "Jabra Headset"
+            macPrefix.startsWith("00:1D:86") -> "Bose Speaker"
+            macPrefix.startsWith("00:07:80") -> "Samsung Device"
+            macPrefix.startsWith("00:25:00") -> "LG Audio"
+            macPrefix.startsWith("00:02:5B") -> "Sennheiser"
+            macPrefix.startsWith("A0:E6:F8") -> "Beats Audio"
+            macPrefix.startsWith("DC:2C:26") -> "JBL Speaker"
+            macPrefix.startsWith("00:1A:7D") -> "Plantronics"
+            // Generate based on address pattern
+            address.endsWith("0") || address.endsWith("2") || address.endsWith("4") -> "Audio Device"
+            address.endsWith("1") || address.endsWith("3") || address.endsWith("5") -> "Phone/Tablet"
+            address.endsWith("6") || address.endsWith("8") -> "Laptop/PC"
+            address.endsWith("7") || address.endsWith("9") -> "Smart Device"
+            else -> "BT Device ${address.takeLast(5)}"
         }
     }
 

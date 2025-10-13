@@ -1218,9 +1218,9 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                     // Draw real nearby devices (not connected) with different signal strengths
                     realNearbyDevices.forEachIndexed { index, (name, address, rssi) ->
                         val angle = Math.toRadians(((index + devices.size) * angleStep).toDouble())
-                        // Distance based on RSSI strength (-40 = close, -80 = far)
-                        val signalStrength = (rssi + 80) / 40f // Convert RSSI to 0-1 range
-                        val distance = maxRadius * (0.3f + signalStrength * 0.5f)
+                        // Distance based on RSSI: stronger signal = closer to center, weaker = farther
+                        val signalStrength = (rssi + 80) / 40f // Convert RSSI to 0-1 range (-80 to -40)
+                        val distance = maxRadius * (0.8f - signalStrength * 0.5f) // Strong signal = close, weak = far
                         
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
                         val y = centerY + (distance * Math.sin(angle)).toFloat()

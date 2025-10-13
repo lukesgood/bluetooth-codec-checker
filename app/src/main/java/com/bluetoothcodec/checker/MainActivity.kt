@@ -1164,11 +1164,11 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                     val centerY = size.height / 2
                     val maxRadius = minOf(centerX, centerY) - 20f
                     
-                    // Draw concentric circles for signal strength zones
+                    // Draw concentric circles for interference risk zones
                     val zones = listOf(
-                        Pair(maxRadius * 0.3f, Color.Red.copy(alpha = 0.3f)),      // High interference
+                        Pair(maxRadius * 0.3f, Color.Red.copy(alpha = 0.3f)),      // High interference (close devices)
                         Pair(maxRadius * 0.6f, Color(0xFFFF9800).copy(alpha = 0.3f)), // Medium interference
-                        Pair(maxRadius * 0.9f, Color(0xFFFFEB3B).copy(alpha = 0.3f)), // Low interference
+                        Pair(maxRadius * 0.9f, Color(0xFFFFEB3B).copy(alpha = 0.3f)), // Low interference (far devices)
                         Pair(maxRadius, Color.Green.copy(alpha = 0.2f))             // Safe zone
                     )
                     
@@ -1225,11 +1225,11 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
                         val y = centerY + (distance * Math.sin(angle)).toFloat()
                         
-                        // Color based on signal strength
+                        // Color based on interference potential (proximity)
                         val signalColor = when {
-                            rssi > -50 -> Color.Red      // Strong signal
-                            rssi > -65 -> Color(0xFFFF9800) // Medium signal
-                            else -> Color(0xFFFFEB3B)    // Weak signal
+                            rssi > -50 -> Color.Red         // Close device = High interference risk
+                            rssi > -65 -> Color(0xFFFF9800) // Medium distance = Medium interference
+                            else -> Color(0xFFFFEB3B)       // Far device = Low interference risk
                         }
                         
                         drawCircle(
@@ -1300,7 +1300,25 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                                 .background(Color.Red, androidx.compose.foundation.shape.CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Interference", fontSize = 8.sp)
+                        Text("High Risk", fontSize = 8.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(Color(0xFFFF9800), androidx.compose.foundation.shape.CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Medium Risk", fontSize = 8.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(Color(0xFFFFEB3B), androidx.compose.foundation.shape.CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Low Risk", fontSize = 8.sp)
                     }
                 }
             }
@@ -1379,9 +1397,9 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                                     .size(4.dp)
                                     .background(
                                         when {
-                                            rssi > -50 -> Color.Red
-                                            rssi > -65 -> Color(0xFFFF9800)
-                                            else -> Color(0xFFFFEB3B)
+                                            rssi > -50 -> Color.Red         // Close = High interference risk
+                                            rssi > -65 -> Color(0xFFFF9800) // Medium = Medium interference
+                                            else -> Color(0xFFFFEB3B)       // Far = Low interference risk
                                         },
                                         androidx.compose.foundation.shape.CircleShape
                                     )

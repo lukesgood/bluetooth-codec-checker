@@ -65,11 +65,11 @@ A comprehensive Android app for detecting and analyzing Bluetooth audio codecs, 
 
 ## Installation
 
-### Latest Release (v1.4)
+### Latest Release (v1.5)
 ```bash
 # Download and install
-wget https://github.com/user/bluetooth-codec-checker/releases/download/v1.4/bluetooth-codec-checker-v1.4.apk
-adb install bluetooth-codec-checker-v1.4.apk
+wget https://github.com/user/bluetooth-codec-checker/releases/download/v1.5/bluetooth-codec-checker-v1.5.apk
+adb install bluetooth-codec-checker-v1.5.apk
 ```
 
 ### Debug Build

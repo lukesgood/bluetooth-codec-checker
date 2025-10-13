@@ -114,7 +114,16 @@ APK location: `app/build/outputs/apk/release/app-release-unsigned.apk`
 
 ## Version History
 
-### v1.4 (Current)
+### v1.5 (Current)
+- **Eliminated all fake RSSI generation** and simulated device data
+- **Fixed crash caused by invalid RSSI range** (-40..-80 corrected to -80..-40)
+- **Removed duplicate device info** from Device Information panel
+- **Deleted Hi-Res audio codec information text**
+- **Added real nearby device detection** with differentiated signal strengths
+- **Show actual RSSI values** with color-coded strength indicators
+- **Clean radar chart** showing only genuine Bluetooth connections
+
+### v1.4
 - **Multiple codec detection methods** using Android APIs and reflection
 - **LG device support** added to codec database
 - **Improved detection reliability** for supported Android versions

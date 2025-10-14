@@ -112,7 +112,7 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "v1.7.3",
+                        text = "v1.7.4",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.fillMaxWidth(),
@@ -1489,12 +1489,13 @@ fun detectEnvironmentType(devices: List<com.bluetoothcodec.checker.BluetoothDevi
     val avgSignal = devices.mapNotNull { it.signalStrength }.average().takeIf { !it.isNaN() } ?: -70.0
     
     return when {
-        deviceCount == 0 -> "No Bluetooth devices detected"
-        deviceCount == 1 && avgSignal > -50 -> "Single device - Good signal"
-        deviceCount == 1 -> "Single device - Weak signal"
-        deviceCount > 1 && avgSignal > -50 -> "Multiple devices - Good environment"
-        deviceCount > 1 -> "Multiple devices - Interference possible"
-        else -> "Unknown environment"
+        deviceCount == 0 -> "No connected devices"
+        nearbySignals > 20 -> "High density area"
+        nearbySignals > 10 -> "Moderate density area" 
+        nearbySignals > 5 -> "Low density area"
+        avgSignal > -50 -> "Good signal quality"
+        avgSignal > -70 -> "Fair signal quality"
+        else -> "Poor signal quality"
     }
 }
 
@@ -1549,11 +1550,11 @@ fun getRealNearbyDevices(): List<Triple<String, String, Int>> {
 
 fun getInterferenceLevel(nearbySignals: Int): String {
     return when {
-        nearbySignals > 15 -> "Critical"
-        nearbySignals > 10 -> "High"
-        nearbySignals > 5 -> "Medium"
-        nearbySignals > 2 -> "Low"
-        else -> "Minimal"
+        nearbySignals > 25 -> "Critical"     // Very crowded area (metro, airport)
+        nearbySignals > 15 -> "High"        // Crowded area (mall, office)
+        nearbySignals > 8 -> "Medium"       // Moderate area (cafe, home with neighbors)
+        nearbySignals > 3 -> "Low"          // Quiet area (suburban home)
+        else -> "Minimal"                   // Very quiet area
     }
 }
 
@@ -1570,12 +1571,12 @@ fun getInterferenceLevelColor(level: String): Color {
 
 fun getEnvironmentTips(environment: String, nearbySignals: Int): String {
     return when {
-        environment.contains("Metro") -> "High interference area. Consider using wired headphones during peak hours."
-        environment.contains("Mall") -> "Many competing signals. Move closer to device or use higher quality codec."
-        environment.contains("Office") -> "WiFi networks may interfere. Try switching to 5GHz WiFi if available."
-        nearbySignals > 10 -> "Dense signal environment detected. Audio dropouts may occur."
-        nearbySignals > 5 -> "Moderate interference. Keep device within 1-2 meters for best performance."
-        else -> "Good signal environment for stable Bluetooth connection."
+        nearbySignals > 20 -> "High interference detected. Keep devices close and avoid obstacles."
+        nearbySignals > 10 -> "Moderate interference. Stay within 2-3 meters for stable connection."
+        nearbySignals > 5 -> "Low interference. Good environment for Bluetooth audio."
+        environment.contains("Poor signal") -> "Move closer to your device or remove obstacles."
+        environment.contains("Fair signal") -> "Connection is stable. Audio quality may vary."
+        else -> "Excellent environment for high-quality Bluetooth audio."
     }
 }
 

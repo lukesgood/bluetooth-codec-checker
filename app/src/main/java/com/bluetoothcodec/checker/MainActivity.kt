@@ -112,7 +112,7 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "v1.6",
+                        text = "v1.7.3",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.fillMaxWidth(),

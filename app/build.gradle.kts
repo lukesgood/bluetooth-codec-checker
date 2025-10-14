@@ -11,8 +11,8 @@ android {
         applicationId = "com.bluetoothcodec.checker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 13
-        versionName = "1.7.4"
+        versionCode = 16
+        versionName = "1.8.1"
     }
 
     signingConfigs {

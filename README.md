@@ -1,6 +1,6 @@
-# Bluetooth Codec Checker (BCC) v2.0.0
+# Bluetooth Codec Checker (BCC) v2.0.1
 
-A professional Android app for detecting and analyzing Bluetooth audio codecs, device information, and connection quality with advanced interference analysis.
+A professional Android app for detecting and analyzing Bluetooth audio codecs, device information, and connection quality with practical interference analysis.
 
 ## Features
 
@@ -54,11 +54,11 @@ A professional Android app for detecting and analyzing Bluetooth audio codecs, d
 
 ## Installation
 
-### Latest Release (v2.0.0 - Final)
+### Latest Release (v2.0.1)
 ```bash
 # Download and install
-wget https://github.com/lukesgood/bluetooth-codec-checker/releases/download/v2.0.0/bluetooth-codec-checker-v2.0.0.apk
-adb install bluetooth-codec-checker-v2.0.0.apk
+wget https://github.com/lukesgood/bluetooth-codec-checker/releases/download/v2.0.1/bluetooth-codec-checker-v2.0.1.apk
+adb install bluetooth-codec-checker-v2.0.1.apk
 ```
 
 ### Build from Source
@@ -122,7 +122,13 @@ adb install bluetooth-codec-checker-v2.0.0.apk
 
 ## Version History
 
-### v2.0.0 (Final Release)
+### v2.0.1 (Latest)
+- **Practical interference analysis** - Connected devices now show as green (no interference)
+- **Simple device count** instead of complex interference levels
+- **Real-time Bluetooth scanning** with actual device discovery
+- **Improved user experience** for close connected devices (earbuds, headphones)
+
+### v2.0.0 (Previous Stable)
 - **Frozen stable version** with all core features
 - **Removed experimental features** that caused compilation issues
 - **Professional audio engineer mode** with real system data

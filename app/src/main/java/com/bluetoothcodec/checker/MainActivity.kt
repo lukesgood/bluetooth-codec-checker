@@ -1225,8 +1225,10 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                         val x = centerX + (distance * Math.cos(angle)).toFloat()
                         val y = centerY + (distance * Math.sin(angle)).toFloat()
                         
-                        // Color based on interference potential (proximity)
-                        val signalColor = when {
+                        // Color based on connection status and interference potential
+                        val signalColor = if (devices.any { it.address == address && it.isConnected }) {
+                            Color.Green  // Connected device = Your device (no interference)
+                        } else when {
                             rssi > -50 -> Color.Red         // Close device = High interference risk
                             rssi > -65 -> Color(0xFFFF9800) // Medium distance = Medium interference
                             else -> Color(0xFFFFEB3B)       // Far device = Low interference risk
@@ -1345,15 +1347,14 @@ fun BluetoothCongestionCard(devices: List<com.bluetoothcodec.checker.BluetoothDe
                 
                 Column {
                     Text(
-                        text = "Interference Level",
+                        text = "Nearby Devices",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
-                    val interferenceLevel = getInterferenceLevel(nearbySignals)
                     Text(
-                        text = interferenceLevel,
+                        text = "$nearbySignals devices",
                         fontSize = 11.sp,
-                        color = getInterferenceLevelColor(interferenceLevel)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

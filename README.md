@@ -97,3 +97,5 @@ This project is for educational and research purposes. Please respect device man
 ---
 
 **Bluetooth Codec Checker - Near Real-Time Professional Audio Analysis**
+
+<!-- Updated: 2025-10-23 -->

@@ -1,4 +1,4 @@
-# Bluetooth Codec Checker (BCC) v2.0.3
+# Bluetooth Codec Checker (BCC)
 
 A professional Android app for **near real-time** Bluetooth audio codec detection and signal analysis.
 

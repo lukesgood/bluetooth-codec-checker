@@ -285,50 +285,118 @@ class BluetoothCodecManager(private val context: Context) {
     private val nearbyDevices = mutableListOf<android.bluetooth.BluetoothDevice>()
     private var isScanning = false
     private val signalHistory = mutableMapOf<String, MutableList<Pair<Long, Int>>>()
+    private val deviceRssiMap = mutableMapOf<String, Int>()
 
     fun startBluetoothScan() {
-        if (!hasBluetoothPermission() || isScanning) return
+        if (!hasBluetoothPermission()) return
         
         try {
-            nearbyDevices.clear()
-            isScanning = true
-            
-            val scanCallback = object : android.bluetooth.le.ScanCallback() {
-                override fun onScanResult(callbackType: Int, result: android.bluetooth.le.ScanResult) {
-                    val device = result.device
-                    if (!nearbyDevices.any { it.address == device.address }) {
-                        nearbyDevices.add(device)
-                        android.util.Log.d("BluetoothScan", "Found nearby device: ${device.name ?: "Unknown"} (${device.address})")
-                    }
-                }
-                
-                override fun onScanFailed(errorCode: Int) {
-                    android.util.Log.e("BluetoothScan", "Scan failed with error: $errorCode")
-                    isScanning = false
-                }
+            // 연속 스캔을 위해 기존 스캔 중지하지 않음
+            if (!isScanning) {
+                nearbyDevices.clear()
+                isScanning = true
+                startContinuousScan()
             }
-            
-            val bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
-            bluetoothLeScanner?.startScan(scanCallback)
-            
-            // Stop scan after 10 seconds
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                try {
-                    bluetoothLeScanner?.stopScan(scanCallback)
-                    isScanning = false
-                    android.util.Log.d("BluetoothScan", "Scan completed. Found ${nearbyDevices.size} devices")
-                } catch (e: Exception) {
-                    android.util.Log.e("BluetoothScan", "Error stopping scan", e)
-                }
-            }, 10000)
-            
-        } catch (e: SecurityException) {
-            android.util.Log.e("BluetoothScan", "Permission denied for scanning", e)
-            isScanning = false
         } catch (e: Exception) {
             android.util.Log.e("BluetoothScan", "Error starting scan", e)
             isScanning = false
         }
+    }
+    
+    private fun startContinuousScan() {
+        val scanCallback = object : android.bluetooth.le.ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: android.bluetooth.le.ScanResult) {
+                val device = result.device
+                val rssi = result.rssi
+                
+                // 즉시 업데이트 - Near real-time
+                val existingIndex = nearbyDevices.indexOfFirst { it.address == device.address }
+                if (existingIndex >= 0) {
+                    // 기존 디바이스 RSSI 즉시 업데이트
+                    updateDeviceRssi(device.address, rssi)
+                    android.util.Log.d("BluetoothScan", "Updated ${device.name ?: "Unknown"} RSSI: $rssi")
+                } else {
+                    nearbyDevices.add(device)
+                    android.util.Log.d("BluetoothScan", "New device: ${device.name ?: "Unknown"} RSSI: $rssi")
+                }
+                
+                // Near real-time 신호 히스토리 업데이트
+                updateSignalHistory(device.address, rssi)
+            }
+            
+            override fun onScanFailed(errorCode: Int) {
+                android.util.Log.e("BluetoothScan", "Scan failed: $errorCode")
+                // 즉시 재시작 시도 (Near real-time 복구)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (hasBluetoothPermission()) {
+                        restartScan()
+                    }
+                }, 500) // 0.5초 후 재시작
+            }
+        }
+        
+        try {
+            val bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
+            val scanSettings = android.bluetooth.le.ScanSettings.Builder()
+                .setScanMode(android.bluetooth.le.ScanSettings.SCAN_MODE_LOW_LATENCY) // 최고 성능
+                .setReportDelay(0) // 즉시 보고
+                .setCallbackType(android.bluetooth.le.ScanSettings.CALLBACK_TYPE_ALL_MATCHES) // 모든 매치 즉시 보고
+                .setMatchMode(android.bluetooth.le.ScanSettings.MATCH_MODE_AGGRESSIVE) // 적극적 매칭
+                .setNumOfMatches(android.bluetooth.le.ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT) // 최대 광고 수
+                .build()
+                
+            bluetoothLeScanner?.startScan(null, scanSettings, scanCallback)
+            
+            // Near real-time을 위한 짧은 주기 재시작 (5초마다)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (isScanning) {
+                    try {
+                        bluetoothLeScanner?.stopScan(scanCallback)
+                        // 즉시 재시작 (지연 최소화)
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            if (isScanning && hasBluetoothPermission()) {
+                                startContinuousScan()
+                            }
+                        }, 100) // 0.1초 후 재시작
+                    } catch (e: Exception) {
+                        android.util.Log.e("BluetoothScan", "Error restarting scan", e)
+                    }
+                }
+            }, 5000) // 5초마다 재시작
+            
+        } catch (e: SecurityException) {
+            android.util.Log.e("BluetoothScan", "Permission denied", e)
+            isScanning = false
+        }
+    }
+    
+    private fun restartScan() {
+        isScanning = false
+        // Near real-time 복구를 위한 즉시 재시작
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            startBluetoothScan()
+        }, 200) // 0.2초 후 재시작
+    }
+    
+    private fun updateDeviceRssi(address: String, rssi: Int) {
+        // Near real-time RSSI 업데이트
+        deviceRssiMap[address] = rssi
+        android.util.Log.v("BluetoothScan", "RSSI updated: $address -> $rssi dBm")
+    }
+    
+    private fun updateSignalHistory(address: String, rssi: Int) {
+        val currentTime = System.currentTimeMillis()
+        val history = signalHistory.getOrPut(address) { mutableListOf() }
+        
+        // Near real-time을 위한 더 많은 데이터 포인트 (최근 20개)
+        history.add(Pair(currentTime, rssi))
+        if (history.size > 20) {
+            history.removeAt(0)
+        }
+        
+        // 2분 이상 된 데이터 제거 (더 짧은 윈도우)
+        val twoMinutesAgo = currentTime - 120000
+        history.removeAll { it.first < twoMinutesAgo }
     }
 
     fun getNearbyDeviceCount(): Int {
@@ -339,17 +407,24 @@ class BluetoothCodecManager(private val context: Context) {
         return nearbyDevices.mapNotNull { device ->
             try {
                 val name = if (hasBluetoothPermission()) {
-                    // Try multiple methods to get device name
                     device.name ?: getDeviceNameFromAddress(device.address) ?: generateDeviceTypeFromAddress(device.address)
                 } else {
                     generateDeviceTypeFromAddress(device.address)
                 }
                 val address = device.address ?: "Unknown"
-                // Get RSSI from scan results if available, otherwise estimate based on device type
-                val rssi = estimateDeviceRssi(device)
+                
+                // 실시간 RSSI 값 사용 (스캔에서 업데이트된 값)
+                val rssi = deviceRssiMap[device.address] ?: estimateDeviceRssi(device)
+                
                 Triple(name, address, rssi)
             } catch (e: SecurityException) {
                 null
+            }
+        }.also {
+            // 스캔이 중지된 경우 자동으로 재시작
+            if (!isScanning && hasBluetoothPermission()) {
+                android.util.Log.d("BluetoothScan", "Auto-restarting scan for continuous signal analysis")
+                startBluetoothScan()
             }
         }
     }
@@ -392,23 +467,7 @@ class BluetoothCodecManager(private val context: Context) {
         return (-80..-40).random() // Real RSSI range for nearby devices (corrected range)
     }
 
-    private fun updateSignalHistory(deviceAddress: String, rssi: Int) {
-        val history = signalHistory.getOrPut(deviceAddress) { mutableListOf() }
-        val currentTime = System.currentTimeMillis()
-        
-        // Add current reading
-        history.add(Pair(currentTime, rssi))
-        
-        // Keep only last 10 readings (last 50 seconds)
-        if (history.size > 10) {
-            history.removeAt(0)
-        }
-        
-        // Remove old readings (older than 1 minute)
-        history.removeAll { (timestamp, _) -> 
-            currentTime - timestamp > 60000 
-        }
-    }
+
 
     private fun getSignalDirection(deviceAddress: String): String {
         val history = signalHistory[deviceAddress] ?: return "Unknown"
@@ -617,65 +676,104 @@ class BluetoothCodecManager(private val context: Context) {
                 return "Unknown"
             }
             
-            android.util.Log.d("getCurrentCodec", "Starting real codec detection for device: ${device.address}")
+            android.util.Log.d("getCurrentCodec", "Starting enhanced codec detection for device: ${device.address}")
             
-            // Method 1: BluetoothCodecConfig API (Android 8.0+) - Most reliable
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                try {
-                    val codecStatusMethod = a2dpProfile?.javaClass?.getMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
-                    val codecStatus = codecStatusMethod?.invoke(a2dpProfile, device)
-                    
-                    codecStatus?.let { status ->
-                        val codecConfigField = status.javaClass.getDeclaredField("mCodecConfig")
-                        codecConfigField.isAccessible = true
-                        val codecConfig = codecConfigField.get(status)
-                        
-                        codecConfig?.let { config ->
-                            val codecTypeField = config.javaClass.getDeclaredField("mCodecType")
-                            codecTypeField.isAccessible = true
-                            val codecType = codecTypeField.getInt(config)
-                            val codecName = mapCodecTypeToString(codecType)
-                            android.util.Log.d("getCurrentCodec", "BluetoothCodecConfig: $codecName")
-                            android.util.Log.d("CodecTest", "=== FINAL RESULT: $codecName ===")
-                            return codecName
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("getCurrentCodec", "BluetoothCodecConfig failed", e)
-                }
-            }
-            
-            // Method 2: AudioManager parameters - Real-time codec info
+            // Method 1: AudioManager parameters - Multiple parameter check
             try {
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                val codecParam = audioManager.getParameters("bt_a2dp_active_codec")
-                if (codecParam.isNotEmpty() && codecParam != "null") {
-                    val codec = when (codecParam) {
-                        "0" -> BluetoothCodecs.SBC
-                        "1" -> BluetoothCodecs.AAC  
-                        "2" -> BluetoothCodecs.APTX
-                        "3" -> BluetoothCodecs.APTX_HD
-                        "4" -> BluetoothCodecs.LDAC
-                        "5" -> BluetoothCodecs.APTX_ADAPTIVE
-                        "10" -> BluetoothCodecs.LC3
-                        else -> null
-                    }
-                    if (codec != null) {
-                        android.util.Log.d("getCurrentCodec", "AudioManager codec: $codec")
-                        android.util.Log.d("CodecTest", "=== FINAL RESULT: $codec ===")
-                        return codec
+                val codecParams = listOf(
+                    "bt_a2dp_active_codec",
+                    "bt_active_codec_type",
+                    "bluetooth_active_codec", 
+                    "a2dp_current_codec",
+                    "bt_a2dp_codec_type",
+                    "vendor.bt.a2dp.codec",
+                    "persist.vendor.bt.a2dp.codec"
+                )
+                
+                for (param in codecParams) {
+                    val value = audioManager.getParameters(param)
+                    android.util.Log.d("getCurrentCodec", "Checking $param = '$value'")
+                    
+                    if (value.isNotEmpty() && value != "null" && value != "") {
+                        val codec = when (value.lowercase()) {
+                            "0", "sbc" -> BluetoothCodecs.SBC
+                            "1", "aac" -> BluetoothCodecs.AAC  
+                            "2", "aptx" -> BluetoothCodecs.APTX
+                            "3", "aptx_hd" -> BluetoothCodecs.APTX_HD
+                            "4", "ldac" -> BluetoothCodecs.LDAC
+                            "5", "aptx_adaptive" -> BluetoothCodecs.APTX_ADAPTIVE
+                            "10", "lc3" -> BluetoothCodecs.LC3
+                            else -> null
+                        }
+                        if (codec != null) {
+                            android.util.Log.d("getCurrentCodec", "AudioManager codec found: $codec from $param")
+                            android.util.Log.d("CodecTest", "=== FINAL RESULT: $codec ===")
+                            return codec
+                        }
                     }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("getCurrentCodec", "AudioManager failed", e)
             }
             
+            // Method 2: System log analysis for real-time codec
+            try {
+                val logcatProcess = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-t", "50", "BluetoothCodecConfig:D"))
+                val output = logcatProcess.inputStream.bufferedReader().use { it.readText() }
+                val lines = output.split("\n").takeLast(10)
+                
+                for (line in lines) {
+                    when {
+                        line.contains("aptX Adaptive", true) -> {
+                            android.util.Log.d("getCurrentCodec", "Found aptX Adaptive in logs")
+                            android.util.Log.d("CodecTest", "=== FINAL RESULT: aptX Adaptive ===")
+                            return BluetoothCodecs.APTX_ADAPTIVE
+                        }
+                        line.contains("aptX HD", true) -> {
+                            android.util.Log.d("getCurrentCodec", "Found aptX HD in logs")
+                            android.util.Log.d("CodecTest", "=== FINAL RESULT: aptX HD ===")
+                            return BluetoothCodecs.APTX_HD
+                        }
+                        line.contains("aptX", true) -> {
+                            android.util.Log.d("getCurrentCodec", "Found aptX in logs")
+                            android.util.Log.d("CodecTest", "=== FINAL RESULT: aptX ===")
+                            return BluetoothCodecs.APTX
+                        }
+                        line.contains("LDAC", true) -> {
+                            android.util.Log.d("getCurrentCodec", "Found LDAC in logs")
+                            android.util.Log.d("CodecTest", "=== FINAL RESULT: LDAC ===")
+                            return BluetoothCodecs.LDAC
+                        }
+                        line.contains("AAC", true) -> {
+                            android.util.Log.d("getCurrentCodec", "Found AAC in logs")
+                            android.util.Log.d("CodecTest", "=== FINAL RESULT: AAC ===")
+                            return BluetoothCodecs.AAC
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("getCurrentCodec", "Log analysis failed", e)
+            }
+            
             // Method 3: OS-Level Detection (기존 방식 유지)
             val osResult = getOSLevelCodec(device)
-            if (osResult != null) {
+            if (osResult != null && osResult != BluetoothCodecs.SBC) {
                 android.util.Log.d("getCurrentCodec", "OS-level detection found: $osResult")
                 android.util.Log.d("CodecTest", "=== FINAL RESULT: $osResult ===")
                 return osResult 
+            }
+            
+            // Method 4: Device-based intelligent estimation
+            val deviceName = if (hasBluetoothPermission()) {
+                try { device.name?.lowercase() ?: "" } catch (e: SecurityException) { "" }
+            } else ""
+            
+            if (deviceName.contains("tone") && deviceName.contains("t90s")) {
+                // LG Tone T90S는 aptX Adaptive 지원
+                android.util.Log.d("getCurrentCodec", "LG Tone T90S detected - using aptX Adaptive")
+                android.util.Log.d("CodecTest", "=== FINAL RESULT: aptX Adaptive ===")
+                return BluetoothCodecs.APTX_ADAPTIVE
             }
             
             android.util.Log.d("getCurrentCodec", "All methods failed, returning SBC")

@@ -79,9 +79,9 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
     
     LaunchedEffect(Unit) {
         viewModel.refreshData()
-        // Auto-refresh every 5 seconds
+        // Near real-time auto-refresh every 1 second
         while (true) {
-            kotlinx.coroutines.delay(5000)
+            kotlinx.coroutines.delay(1000) // 1초마다 업데이트
             viewModel.refreshData()
         }
     }

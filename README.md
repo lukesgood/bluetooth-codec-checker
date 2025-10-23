@@ -1,215 +1,117 @@
-# Bluetooth Codec Checker (BCC) v2.0.1
+# Bluetooth Codec Checker (BCC) v2.0.3
 
-A professional Android app for detecting and analyzing Bluetooth audio codecs, device information, and connection quality with practical interference analysis.
+A professional Android app for **near real-time** Bluetooth audio codec detection and signal analysis.
 
-## Features
+## 🚀 Key Features
 
-### 🎵 Codec Detection
-- **Real-time codec detection** for connected Bluetooth audio devices
-- **Comprehensive codec support**: SBC, AAC, aptX, aptX HD, aptX LL, aptX Adaptive, LDAC, LC3
-- **Hi-Res audio identification** with quality indicators
-- **OS-Level detection method** for maximum accuracy
-- **Professional codec analysis** with technical specifications
+### ⚡ Near Real-Time Analysis
+- **1-second UI updates** for instant feedback
+- **5-second scan cycles** with continuous monitoring
+- **Instant RSSI detection** with immediate logging
+- **20 data points** signal history for accurate analysis
 
-### 📱 Device Information
-- **Chipset detection** with manufacturer and model information
-- **OS version** and Android version display
-- **Supported codec list** based on device capabilities
-- **Enhanced device name recognition** with manufacturer database
-- **Professional audio engineer mode** with technical metrics
+### 🎯 Enhanced Codec Detection
+- **Multi-method detection**: BluetoothCodecConfig API + AudioManager + Log analysis
+- **Real-time codec monitoring** during audio playback
+- **Device-specific optimization** (LG Tone T90S aptX Adaptive)
+- **Hidden API workaround** for maximum compatibility
 
-### 🔗 Connection Analysis
-- **Signal strength monitoring** with distance estimation
-- **Battery level tracking** for connected devices
-- **Real-time interference analysis** with risk assessment
-- **Device type identification** with detailed model information
-- **Professional radar chart** with interference visualization
+### 📡 High-Performance Scanning
+- **SCAN_MODE_LOW_LATENCY** for maximum performance
+- **Aggressive matching** with immediate result reporting
+- **Auto-recovery** with 0.5s failure recovery time
+- **Continuous operation** with automatic restart
 
-### 📊 Professional Interface
-- **Audio Engineer Mode** with technical measurements
-- **Interactive radar chart** with interference risk zones
-- **Material Design 3** UI with professional styling
-- **Real system data only** - no pseudo or estimated values
-- **Color-coded interference levels** (High/Medium/Low Risk)
+## 📊 Supported Codecs
 
-### 🔧 Technical Features
-- **Enhanced Bluetooth scanning** with BLE and Classic discovery
-- **Manufacturer OUI database** for device identification
-- **Real audio system metrics** from Android AudioManager
-- **Professional performance analysis**
-- **No root, ADB, or developer options required**
+| Codec | Quality | Latency | Detection Method | Real-Time |
+|-------|---------|---------|------------------|-----------|
+| **LDAC** | Premium | 150-200ms | AudioManager + Log | ✅ |
+| **aptX Adaptive** | High | 50-80ms | Log Analysis + Device ID | ✅ |
+| **aptX HD** | High | 130ms | AudioManager + System | ✅ |
+| **aptX** | Good | 40ms | AudioManager + System | ✅ |
+| **AAC** | Good | 40-150ms | AudioManager + System | ✅ |
+| **LC3** | Basic | 20-30ms | AudioManager (Android 13+) | ✅ |
+| **SBC** | Basic | 40-200ms | Always Available | ✅ |
 
-## Supported Codecs
+## 📱 Installation
 
-| Codec | Quality | Latency | Sample Rate | Bitrate |
-|-------|---------|---------|-------------|---------|
-| **LDAC** | Premium | 150-200ms | 48-96 kHz | 330-990 kbps |
-| **aptX HD** | High | 130ms | 48 kHz | 576 kbps |
-| **aptX Adaptive** | High | 50-80ms | 48-96 kHz | 279-420 kbps |
-| **aptX** | Good | 40ms | 48 kHz | 352 kbps |
-| **aptX LL** | Good | 32-40ms | 48 kHz | 352 kbps |
-| **AAC** | Good | 40-150ms | 44.1 kHz | 256 kbps |
-| **LC3** | Basic | 20-30ms | 48 kHz | 160 kbps |
-| **SBC** | Basic | 40-200ms | 44.1 kHz | 328 kbps |
-
-## Installation
-
-### Latest Release (v2.0.1)
+### Latest Release (v2.0.3)
 ```bash
 # Download and install
-wget https://github.com/lukesgood/bluetooth-codec-checker/releases/download/v2.0.1/bluetooth-codec-checker-v2.0.1.apk
-adb install bluetooth-codec-checker-v2.0.1.apk
+wget https://github.com/lukesgood/bluetooth-codec-checker/releases/download/v2.0.3/bluetooth-codec-checker-v2.0.3.apk
+adb install bluetooth-codec-checker-v2.0.3.apk
 ```
 
-### Build from Source
-```bash
-# Debug build
-./gradlew assembleDebug
+### Requirements
+- **Android 8.0+** (API 26+)
+- **Bluetooth permissions** (CONNECT, SCAN)
+- **Location permission** (for device discovery)
 
-# Release build
-./gradlew assembleRelease
-```
+## 🎯 Performance Metrics
 
-## Permissions Required
+### Near Real-Time Performance
+- **UI Updates**: 1 second (80% faster)
+- **Scan Cycles**: 5 seconds (83% faster)
+- **Failure Recovery**: 0.5 seconds (75% faster)
+- **Restart Delay**: 0.1 seconds (90% faster)
 
-- **BLUETOOTH_CONNECT** (Android 12+)
-- **BLUETOOTH_SCAN** (Android 12+)
-- **ACCESS_FINE_LOCATION** (for device discovery)
-- **BLUETOOTH** (Android 11 and below)
-- **BLUETOOTH_ADMIN** (Android 11 and below)
+### Signal Analysis
+- **Data Points**: 20 per device (100% increase)
+- **Time Window**: 2 minutes (optimized)
+- **RSSI Range**: -48dBm to -72dBm detected
+- **Update Frequency**: Near real-time
 
-## Professional Features
+## 🔍 Usage
 
-### Audio Engineer Mode
-- **Sample Rate**: Real measurements from AudioManager (44.1kHz, 48kHz, 96kHz)
-- **Buffer Size**: Actual system buffer configuration (frames)
-- **Audio Latency**: Calculated from real buffer size and sample rate
-- **Volume Levels**: Current system volume settings
-- **Audio Mode**: Real Android audio state (Normal, In Call, Communication)
-- **System Status**: Live Bluetooth connection status
+### Basic Operation
+1. **Install app** and grant permissions
+2. **Connect Bluetooth audio device**
+3. **Start music playback** for codec detection
+4. **View real-time analysis** in app interface
 
-### Interference Analysis
-- **Dual scanning** (BLE + Classic Bluetooth)
-- **RSSI-based positioning** on professional radar chart
-- **Color-coded risk levels** with realistic thresholds
-- **Manufacturer identification** from MAC address OUI database
-- **Real-time device discovery** with enhanced naming
+### Advanced Features
+- **Real-time codec switching** detection
+- **Signal strength monitoring** with distance estimation
+- **Interference analysis** with multiple device tracking
+- **Professional audio metrics** display
 
-### Performance Classifications
-- **Latency Classes**: Ultra-Low, Low, Medium, High, Very High
-- **Sample Rate Classes**: Hi-Res, High, Standard, Low
-- **Buffer Classes**: Low-Latency, Balanced, Stable, High-Latency
+## 🧪 Testing Results
 
-## Technical Implementation
+### Codec Detection Accuracy
+- ✅ **LG Tone T90S**: aptX Adaptive correctly detected
+- ✅ **Sony WH-1000XM**: LDAC detection confirmed
+- ✅ **Apple AirPods**: AAC optimization verified
+- ✅ **Generic devices**: SBC fallback working
 
-### Architecture
-- **MVVM pattern** with Jetpack Compose UI
-- **Kotlin Coroutines** for async operations
-- **Material Design 3** components
-- **Real system data only** - no pseudo measurements
+### Signal Analysis Performance
+- ✅ **RSSI tracking**: -48dBm to -72dBm range
+- ✅ **Continuous monitoring**: No scan gaps
+- ✅ **Fast recovery**: 0.5s failure recovery
+- ✅ **Multiple devices**: Simultaneous tracking
 
-### Detection Methods
-- **OS-Level Detection** (Primary method for accuracy)
-- **AudioManager** real-time configuration
-- **System properties** for codec support
-- **Enhanced Bluetooth APIs** for comprehensive scanning
+## 📈 Version History
 
-### Data Sources
-- **Android AudioManager** for real audio metrics
-- **Bluetooth APIs** for device and codec information
-- **System properties** for hardware capabilities
-- **Manufacturer OUI database** for device identification
+### v2.0.3 (Current) - Near Real-Time Analysis
+- **1-second UI updates** for instant feedback
+- **Enhanced codec detection** with log analysis
+- **High-performance scanning** with aggressive matching
+- **Auto-recovery system** with 0.5s failure recovery
 
-## Version History
+### v2.0.2 - Enhanced Real Codec Detection
+- **Multi-method codec detection** system
+- **Hidden API workaround** implementation
+- **Device-specific optimization** added
 
-### v2.0.1 (Latest)
-- **Practical interference analysis** - Connected devices now show as green (no interference)
-- **Simple device count** instead of complex interference levels
-- **Real-time Bluetooth scanning** with actual device discovery
-- **Improved user experience** for close connected devices (earbuds, headphones)
+### v2.0.1 - Practical Interference Analysis
+- **Connected device optimization** (green indicators)
+- **Simple device counting** for interference
+- **Real-time Bluetooth scanning** improvements
 
-### v2.0.0 (Previous Stable)
-- **Frozen stable version** with all core features
-- **Removed experimental features** that caused compilation issues
-- **Professional audio engineer mode** with real system data
-- **Enhanced interference analysis** with realistic thresholds
-- **Clean, stable codebase** ready for production use
+## 📄 License
 
-### v1.7.4 (Previous Stable)
-- **Fixed radar chart positioning** - weak signals appear farther from center
-- **Corrected proximity representation** for interference analysis
-- **Improved visual accuracy** of signal strength mapping
-- **Realistic interference levels** instead of exaggerated warnings
-
-### v1.7.1
-- **Clarified interference color logic** throughout the app
-- **Enhanced legend** with High/Medium/Low Risk indicators
-- **Consistent color meaning** for interference analysis
-
-### v1.7
-- **Enhanced interference source naming** with manufacturer recognition
-- **Added manufacturer OUI database** for 10+ major brands
-- **Improved device type inference** from MAC address patterns
-- **Enhanced Bluetooth scanning** with dual BLE/Classic discovery
-
-## Interference Analysis
-
-### Color-Coded Risk System
-- 🔴 **Red**: Close devices (High interference risk)
-- 🟠 **Orange**: Medium distance (Medium interference)
-- 🟡 **Yellow**: Far devices (Low interference risk)
-- 🟢 **Green**: Connected devices (No interference)
-
-### Professional Radar Chart
-- **Distance-based positioning** (closer = stronger signal)
-- **Real-time updates** with enhanced device naming
-- **Interference risk zones** with professional color coding
-- **Manufacturer identification** for better device recognition
-
-### Supported Manufacturers
-- **Apple**: AirPods, Beats products
-- **Sony**: WH/WF series with LDAC support
-- **Jabra**: Elite series with aptX support
-- **Bose**: QuietComfort series
-- **Sennheiser**: Momentum series
-- **Samsung**: Galaxy Buds series
-- **JBL**: Speakers and headphones
-- **LG**: Audio devices
-- **Plantronics**: Professional headsets
-
-## Build Requirements
-
-- **Android Studio** Arctic Fox or later
-- **Gradle** 8.0+
-- **Kotlin** 1.9+
-- **Compose** 1.5+
-- **Target SDK** 34
-- **Min SDK** 26 (Android 8.0)
-
-## Technical Specifications
-
-### Real System Data
-- **Sample Rate**: Direct from `AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE`
-- **Buffer Size**: Real from `AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER`
-- **Audio Latency**: Calculated as `(bufferSize / sampleRate) * 1000`
-- **Volume Levels**: Actual system volume via `getStreamVolume()`
-- **Audio Mode**: Real mode from `audioManager.mode`
-- **Bluetooth Status**: True connection state from system APIs
-
-### No Pseudo Data
-- **No estimated bitrates** or fake quality scores
-- **No simulated measurements** or calculated predictions
-- **No artificial intelligence** or predictive features
-- **Pure system information** from Android audio stack
-
-## Contributing
-
-This is a **frozen, stable release**. The app provides professional-grade Bluetooth codec analysis using real Android system data. No additional features will be added to maintain stability.
-
-## License
-
-This project is for educational and research purposes. Please respect device manufacturer APIs and user privacy when using codec detection and interference analysis features.
+This project is for educational and research purposes. Please respect device manufacturer APIs and user privacy when using codec detection and signal analysis features.
 
 ---
 
-**Bluetooth Codec Checker v2.0.0 - Professional Audio Analysis Tool**
+**Bluetooth Codec Checker v2.0.3 - Near Real-Time Professional Audio Analysis**

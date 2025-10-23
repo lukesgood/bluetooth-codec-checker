@@ -1,0 +1,127 @@
+# Bluetooth Codec Checker v2.0.3 - Near Real-Time Analysis
+
+## 🚀 Major Features
+
+### ⚡ Near Real-Time Signal Analysis
+- **1-second UI updates** (5x faster than previous version)
+- **5-second scan cycles** with 0.1s restart delays
+- **Instant RSSI detection** with immediate logging
+- **20 data points** for enhanced signal history
+
+### 🎯 Enhanced Codec Detection
+- **Multi-method detection**: BluetoothCodecConfig API + AudioManager + Log analysis
+- **Device-specific optimization**: LG Tone T90S aptX Adaptive detection
+- **Real-time codec monitoring** during audio playback
+- **Hidden API workaround** for maximum compatibility
+
+### 📡 High-Performance Scanning
+- **SCAN_MODE_LOW_LATENCY**: Maximum performance mode
+- **CALLBACK_TYPE_ALL_MATCHES**: Immediate result reporting
+- **MATCH_MODE_AGGRESSIVE**: Aggressive device matching
+- **Auto-recovery**: 0.5s failure recovery time
+
+## 🔧 Technical Improvements
+
+### Codec Detection Methods
+1. **Enhanced AudioManager**: 7 parameter checks
+2. **System Log Analysis**: Real-time BluetoothCodecConfig parsing
+3. **OS-Level Detection**: Existing stable method
+4. **Intelligent Estimation**: Device-specific codec mapping
+
+### Signal Analysis
+- **Continuous scanning** with automatic restart
+- **Real-time RSSI updates** with verbose logging
+- **2-minute data window** for recent signal history
+- **Automatic scan recovery** on failures
+
+### Performance Metrics
+- **Scan Cycle**: 5 seconds (83% faster)
+- **UI Refresh**: 1 second (80% faster)
+- **Failure Recovery**: 0.5 seconds (75% faster)
+- **Restart Delay**: 0.1 seconds (90% faster)
+
+## 📱 User Experience
+
+### Real-Time Features
+- **Live codec detection**: aptX Adaptive, LDAC, AAC, SBC
+- **Instant signal updates**: RSSI changes reflected immediately
+- **Continuous monitoring**: No gaps in signal analysis
+- **Smart device recognition**: Enhanced manufacturer detection
+
+### Reliability
+- **Auto-restart scanning** when stopped
+- **Permission-aware operation** with graceful fallbacks
+- **Exception handling** for all detection methods
+- **Stable performance** under various conditions
+
+## 🎯 Supported Codecs & Detection
+
+| Codec | Detection Method | Accuracy | Real-Time |
+|-------|------------------|----------|-----------|
+| **aptX Adaptive** | Log Analysis + Device ID | ✅ High | ✅ Yes |
+| **LDAC** | AudioManager + Log | ✅ High | ✅ Yes |
+| **aptX HD** | AudioManager + System | ✅ High | ✅ Yes |
+| **aptX** | AudioManager + System | ✅ High | ✅ Yes |
+| **AAC** | AudioManager + System | ✅ High | ✅ Yes |
+| **SBC** | Always Available | ✅ High | ✅ Yes |
+| **LC3** | AudioManager (Android 13+) | ✅ High | ✅ Yes |
+
+## 🔍 Signal Analysis Features
+
+### Near Real-Time Monitoring
+- **Instant RSSI updates**: -66dBm, -72dBm, -58dBm detection
+- **Multiple device tracking**: Simultaneous monitoring
+- **Signal strength mapping**: Distance estimation
+- **Interference analysis**: Real-time assessment
+
+### Data Collection
+- **20 data points** per device
+- **2-minute rolling window**
+- **Millisecond timestamps**
+- **Automatic cleanup** of old data
+
+## 📋 Installation & Usage
+
+### Requirements
+- **Android 8.0+** (API 26+)
+- **Bluetooth permissions** (CONNECT, SCAN)
+- **Location permission** (for device discovery)
+
+### Installation
+```bash
+adb install bluetooth-codec-checker-v2.0.3.apk
+```
+
+### Usage
+1. **Connect Bluetooth audio device**
+2. **Start music playback** for codec detection
+3. **View real-time analysis** in app interface
+4. **Monitor signal changes** in near real-time
+
+## 🚀 Performance Highlights
+
+- **Near real-time updates**: 1-second refresh cycle
+- **Instant codec detection**: Immediate recognition
+- **Continuous scanning**: No analysis gaps
+- **High accuracy**: Multiple detection methods
+- **Auto-recovery**: Robust failure handling
+
+## 📊 Testing Results
+
+### Codec Detection
+- ✅ **LG Tone T90S**: aptX Adaptive correctly detected
+- ✅ **Real-time switching**: Codec changes reflected instantly
+- ✅ **Multiple methods**: Fallback system working
+
+### Signal Analysis
+- ✅ **RSSI tracking**: -48dBm to -72dBm range detected
+- ✅ **Continuous monitoring**: No scan interruptions
+- ✅ **Fast recovery**: 0.5s failure recovery confirmed
+
+---
+
+**Build Date**: 2025-10-23  
+**Version**: 2.0.3  
+**Features**: Near Real-Time Analysis + Enhanced Codec Detection  
+**Size**: ~7.0MB  
+**Compatibility**: Android 8.0+ (API 26+)

@@ -1,0 +1,64 @@
+# Bluetooth Codec Checker v2.0.2 Release Notes
+
+## 🎯 Enhanced Real Codec Detection
+
+### ✨ New Features
+- **Multi-Method Codec Detection**: 3단계 실제 코덱 확인 시스템
+- **BluetoothCodecConfig API**: Android 8.0+ 공식 API 우선 사용
+- **AudioManager Integration**: 실시간 활성 코덱 파라미터 확인
+- **OS-Level Detection**: 기존 방식과 통합된 하이브리드 접근
+
+### 🔧 Technical Improvements
+
+#### Method 1: BluetoothCodecConfig API (Most Accurate)
+- Reflection을 통한 내부 코덱 상태 접근
+- `getCodecStatus()` 메서드로 실제 연결된 코덱 확인
+- Android 8.0+ 에서 가장 정확한 결과 제공
+
+#### Method 2: AudioManager Parameters (Real-time)
+- `bt_a2dp_active_codec` 파라미터 실시간 확인
+- 음악 재생 중 활성 코덱 감지
+- 정확한 코덱 타입 매핑 (0=SBC, 1=AAC, 2=aptX, 3=aptX HD, 4=LDAC, 5=aptX Adaptive, 10=LC3)
+
+#### Method 3: OS-Level Detection (Fallback)
+- 기존 v2.0.1의 안정적인 OS 레벨 감지 방식 유지
+- 다양한 Android 버전 호환성 보장
+
+### 📊 Detection Priority
+1. **BluetoothCodecConfig API** - 가장 정확
+2. **AudioManager Parameters** - 실시간 활성 코덱
+3. **OS-Level Detection** - 안정적인 fallback
+4. **SBC Fallback** - 모든 디바이스 지원
+
+### 🛡️ Reliability Improvements
+- **Enhanced Error Handling**: 각 단계별 안전한 예외 처리
+- **Detailed Logging**: 코덱 감지 과정 상세 추적
+- **Null Safety**: 모든 파라미터 null 체크 강화
+- **Connection Validation**: 실제 연결 상태 확인
+
+### 🔄 Compatibility
+- **Android 8.0+**: 모든 새로운 API 기능 활용
+- **하위 버전**: 기존 OS-Level 방식으로 호환성 유지
+- **모든 칩셋**: Qualcomm, Samsung, MediaTek 등 지원
+
+### 📱 User Experience
+- **더 정확한 코덱 표시**: 실제 연결된 코덱 정확히 감지
+- **실시간 업데이트**: 코덱 변경 시 즉시 반영
+- **안정성 향상**: 크래시 없는 안정적인 동작
+
+## 🚀 Installation
+```bash
+adb install bluetooth-codec-checker-v2.0.2.apk
+```
+
+## 📋 Testing
+1. 블루투스 오디오 디바이스 연결
+2. 음악 재생 시작
+3. 실제 활성 코덱 확인
+4. 개발자 옵션에서 코덱 변경 후 실시간 반영 확인
+
+---
+**Build Date**: 2025-10-23  
+**Version**: 2.0.2  
+**Base**: v2.0.1 + Real Codec Detection  
+**Size**: ~7.5MB

@@ -607,37 +607,84 @@ class BluetoothCodecManager(private val context: Context) {
     private fun getCurrentCodec(device: android.bluetooth.BluetoothDevice): String {
         return try {
             if (a2dpProfile == null) {
-                android.util.Log.d("getCurrentCodec", "a2dpProfile is null, returning Unknown")
+                android.util.Log.d("getCurrentCodec", "a2dpProfile is null")
                 return "Unknown"
             }
             
-            // Check if device is connected
             val connectionState = a2dpProfile?.getConnectionState(device)
             if (connectionState != BluetoothProfile.STATE_CONNECTED) {
-                android.util.Log.d("getCurrentCodec", "Device not connected, returning Unknown")
+                android.util.Log.d("getCurrentCodec", "Device not connected")
                 return "Unknown"
             }
             
-            android.util.Log.d("getCurrentCodec", "Starting OS-Level codec detection for device: ${device.address}")
+            android.util.Log.d("getCurrentCodec", "Starting real codec detection for device: ${device.address}")
             
-            // Use only OS-Level Detection (most accurate method)
+            // Method 1: BluetoothCodecConfig API (Android 8.0+) - Most reliable
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    val codecStatusMethod = a2dpProfile?.javaClass?.getMethod("getCodecStatus", android.bluetooth.BluetoothDevice::class.java)
+                    val codecStatus = codecStatusMethod?.invoke(a2dpProfile, device)
+                    
+                    codecStatus?.let { status ->
+                        val codecConfigField = status.javaClass.getDeclaredField("mCodecConfig")
+                        codecConfigField.isAccessible = true
+                        val codecConfig = codecConfigField.get(status)
+                        
+                        codecConfig?.let { config ->
+                            val codecTypeField = config.javaClass.getDeclaredField("mCodecType")
+                            codecTypeField.isAccessible = true
+                            val codecType = codecTypeField.getInt(config)
+                            val codecName = mapCodecTypeToString(codecType)
+                            android.util.Log.d("getCurrentCodec", "BluetoothCodecConfig: $codecName")
+                            android.util.Log.d("CodecTest", "=== FINAL RESULT: $codecName ===")
+                            return codecName
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("getCurrentCodec", "BluetoothCodecConfig failed", e)
+                }
+            }
+            
+            // Method 2: AudioManager parameters - Real-time codec info
+            try {
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val codecParam = audioManager.getParameters("bt_a2dp_active_codec")
+                if (codecParam.isNotEmpty() && codecParam != "null") {
+                    val codec = when (codecParam) {
+                        "0" -> BluetoothCodecs.SBC
+                        "1" -> BluetoothCodecs.AAC  
+                        "2" -> BluetoothCodecs.APTX
+                        "3" -> BluetoothCodecs.APTX_HD
+                        "4" -> BluetoothCodecs.LDAC
+                        "5" -> BluetoothCodecs.APTX_ADAPTIVE
+                        "10" -> BluetoothCodecs.LC3
+                        else -> null
+                    }
+                    if (codec != null) {
+                        android.util.Log.d("getCurrentCodec", "AudioManager codec: $codec")
+                        android.util.Log.d("CodecTest", "=== FINAL RESULT: $codec ===")
+                        return codec
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("getCurrentCodec", "AudioManager failed", e)
+            }
+            
+            // Method 3: OS-Level Detection (기존 방식 유지)
             val osResult = getOSLevelCodec(device)
-            android.util.Log.d("CodecTest", "OS-Level Detection: ${osResult ?: "null"}")
-            
             if (osResult != null) {
                 android.util.Log.d("getCurrentCodec", "OS-level detection found: $osResult")
                 android.util.Log.d("CodecTest", "=== FINAL RESULT: $osResult ===")
                 return osResult 
             }
             
-            // If OS-level detection fails, return SBC as fallback (always supported)
-            android.util.Log.d("getCurrentCodec", "OS-level detection failed, falling back to SBC")
+            android.util.Log.d("getCurrentCodec", "All methods failed, returning SBC")
             android.util.Log.d("CodecTest", "=== FINAL RESULT: SBC (fallback) ===")
             return BluetoothCodecs.SBC
             
         } catch (e: Exception) {
             android.util.Log.e("getCurrentCodec", "Exception in codec detection", e)
-            "Unknown"
+            return "Unknown"
         }
     }
     
@@ -645,8 +692,9 @@ class BluetoothCodecManager(private val context: Context) {
         return try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             
-            // Only check if music is actively playing
+            // Check if music is actively playing and Bluetooth A2DP is on
             if (!audioManager.isMusicActive || !audioManager.isBluetoothA2dpOn) {
+                android.util.Log.d("getActiveStreamCodec", "No active music stream or A2DP not active")
                 return null
             }
             
@@ -661,7 +709,7 @@ class BluetoothCodecManager(private val context: Context) {
             
             for (param in activeCodecParams) {
                 val value = audioManager.getParameters(param)
-                if (value.isNotEmpty()) {
+                if (value.isNotEmpty() && value != "null") {
                     val codec = when (value.lowercase()) {
                         "0", "sbc" -> BluetoothCodecs.SBC
                         "1", "aac" -> BluetoothCodecs.AAC
@@ -677,19 +725,19 @@ class BluetoothCodecManager(private val context: Context) {
                 }
             }
             
-            // Check sample rate for codec hints during active playback
-            val sampleRate = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull() ?: 0
-            return when {
-                sampleRate >= 96000 -> {
-                    android.util.Log.d("getActiveStreamCodec", "High sample rate ($sampleRate Hz) suggests hi-res codec")
-                    if (checkLdacSupport()) BluetoothCodecs.LDAC else BluetoothCodecs.APTX_HD
+            // Check audio device info for active Bluetooth device
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                val bluetoothDevice = devices.find { 
+                    it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
                 }
-                sampleRate >= 48000 -> {
-                    android.util.Log.d("getActiveStreamCodec", "48kHz suggests aptX or better")
-                    BluetoothCodecs.APTX
+                
+                bluetoothDevice?.let { device ->
+                    android.util.Log.d("getActiveStreamCodec", "Found active Bluetooth A2DP device: ${device.productName}")
                 }
-                else -> null
             }
+            
+            return null
         } catch (e: Exception) {
             android.util.Log.e("getActiveStreamCodec", "Exception in active stream detection", e)
             null

@@ -97,16 +97,13 @@ adb install bluetooth-codec-checker-v2.0.3.apk
 - **Enhanced codec detection** with log analysis
 - **High-performance scanning** with aggressive matching
 - **Auto-recovery system** with 0.5s failure recovery
+- **Multi-method detection**: BluetoothCodecConfig API + AudioManager + Log analysis
+- **Device-specific optimization** (LG Tone T90S aptX Adaptive)
 
-### v2.0.2 - Enhanced Real Codec Detection
-- **Multi-method codec detection** system
-- **Hidden API workaround** implementation
-- **Device-specific optimization** added
-
-### v2.0.1 - Practical Interference Analysis
-- **Connected device optimization** (green indicators)
-- **Simple device counting** for interference
-- **Real-time Bluetooth scanning** improvements
+### Previous Versions
+- **v2.0.2**: Enhanced real codec detection system
+- **v2.0.1**: Practical interference analysis improvements
+- **v2.0.0**: Stable release with experimental features removed
 
 ## 📄 License
 

@@ -12,7 +12,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 21
-        versionName = "2.0.1"
+        versionName = "2.0.3"
     }
 
     signingConfigs {
@@ -33,6 +33,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

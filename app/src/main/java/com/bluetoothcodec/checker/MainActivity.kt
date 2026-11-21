@@ -21,7 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -95,6 +95,8 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // Edge-to-edge is enforced from targetSdk 35: keep content clear of system bars.
+            .safeDrawingPadding()
             .padding(16.dp)
     ) {
         if (!hasPermission) {

@@ -12,7 +12,7 @@ A professional Android app for **near real-time** Bluetooth audio codec detectio
 
 ### 🎯 Enhanced Codec Detection
 - **Multi-method detection**: BluetoothCodecConfig API + AudioManager + Log analysis
-- **Real-time codec monitoring** during audio playbook
+- **Real-time codec monitoring** during audio playback
 - **Device-specific optimization** for various audio devices
 - **Hidden API workaround** for maximum compatibility
 
@@ -37,7 +37,8 @@ A professional Android app for **near real-time** Bluetooth audio codec detectio
 ## 📱 Installation
 
 ### Requirements
-- **Android 8.0+** (API 26+)
+- **Android 8.0+** (API 26+), built against API 36
+- **JDK 17+** to build
 - **Bluetooth permissions** (CONNECT, SCAN)
 - **Location permission** (for device discovery)
 
@@ -47,6 +48,12 @@ git clone https://github.com/lukesgood/bluetooth-codec-checker.git
 cd bluetooth-codec-checker
 ./gradlew assembleDebug
 ```
+
+### Release signing
+The keystore and its passwords are not stored in this repository. To build a signed
+release, copy `keystore.properties.example` to `keystore.properties` (git-ignored) and
+fill it in, or set `BCC_STORE_FILE`, `BCC_STORE_PASSWORD`, `BCC_KEY_ALIAS` and
+`BCC_KEY_PASSWORD`. Without them `./gradlew assembleRelease` produces an unsigned APK.
 
 ## 🎯 Performance Metrics
 

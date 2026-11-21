@@ -20,3 +20,7 @@ build/
 *.keystore
 .gradle/
 local.properties
+
+# Signing secrets
+keystore.properties
+*.jks

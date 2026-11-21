@@ -138,47 +138,38 @@ object DeviceCodecDatabase {
             .replace(")", "")
             .trim()
         
-        android.util.Log.d("DeviceCodecDB", "Checking device: '$deviceName' -> normalized: '$normalizedName'")
         
         // Direct match first
         deviceDatabase[normalizedName]?.let { 
-            android.util.Log.d("DeviceCodecDB", "Direct match found: $it")
             return it 
         }
         
-        // Partial match - check if device name contains any key
-        for ((key, codecs) in deviceDatabase) {
-            if (normalizedName.contains(key) || key.contains(normalizedName)) {
-                android.util.Log.d("DeviceCodecDB", "Partial match '$key' found: $codecs")
-                return codecs
-            }
-        }
+        // Partial match: the device name must contain the key. Prefer the longest key so
+        // "airpods pro 2" wins over "airpods" regardless of declaration order.
+        deviceDatabase.keys
+            .filter { normalizedName.contains(it) }
+            .maxByOrNull { it.length }
+            ?.let { return deviceDatabase.getValue(it) }
         
         // Special cases for LG devices - check for any LG/Tone patterns
         when {
             normalizedName.contains("tone free") -> {
-                android.util.Log.d("DeviceCodecDB", "Tone Free pattern match")
                 return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
             }
             normalizedName.contains("lg") && normalizedName.contains("tone") -> {
-                android.util.Log.d("DeviceCodecDB", "LG Tone pattern match")
                 return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
             }
             normalizedName.contains("t90") -> {
-                android.util.Log.d("DeviceCodecDB", "T90 pattern match")
                 return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
             }
             normalizedName.contains("lg") -> {
-                android.util.Log.d("DeviceCodecDB", "LG brand match")
                 return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
             }
             normalizedName.contains("tone") -> {
-                android.util.Log.d("DeviceCodecDB", "Tone pattern match")
                 return listOf(BluetoothCodecs.SBC, BluetoothCodecs.AAC, BluetoothCodecs.APTX, BluetoothCodecs.APTX_ADAPTIVE)
             }
         }
         
-        android.util.Log.d("DeviceCodecDB", "No match found for: '$normalizedName'")
         return null
     }
     

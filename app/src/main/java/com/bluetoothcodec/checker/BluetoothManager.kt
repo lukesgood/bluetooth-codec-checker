@@ -2,18 +2,25 @@ package com.bluetoothcodec.checker
 
 import android.Manifest
 import android.bluetooth.BluetoothA2dp
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -265,7 +272,7 @@ class BluetoothCodecManager(context: Context) {
             supportedCodecs = getDeviceSupportedCodecs(name),
             batteryLevel = getBatteryLevel(device),
             // Only available when the device also advertises over BLE with the same address.
-            signalStrength = nearby[device.address]?.rssi
+            signalStrength = nearby[device.address]?.takeIf { it.transport == Transport.BLE }?.rssi
         )
     }
 
@@ -370,27 +377,81 @@ class BluetoothCodecManager(context: Context) {
     }
 
     // ---------------------------------------------------------------------
-    // Nearby BLE devices
+    // Nearby devices: continuous BLE scan plus on-demand classic inquiry
     // ---------------------------------------------------------------------
 
-    private data class NearbyEntry(val name: String?, val rssi: Int, val lastSeenMs: Long)
-
-    private val nearby = ConcurrentHashMap<String, NearbyEntry>()
+    private val nearby = ConcurrentHashMap<String, NearbyDevice>()
     @Volatile private var isScanning = false
     @Volatile private var scanFailed = false
+    @Volatile private var classicDiscovering = false
+    private var discoveryReceiverRegistered = false
 
-    private val scanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val device = result.device ?: return
-            val address = device.address ?: return
-            val name = nearby[address]?.name
-                ?: result.scanRecord?.deviceName
-                ?: try {
+    private fun record(
+        device: android.bluetooth.BluetoothDevice,
+        advertisedName: String?,
+        rssi: Int,
+        transport: Transport,
+        companyId: Int? = null,
+        connectable: Boolean? = null,
+        majorClass: Int? = null
+    ) {
+        val address = device.address ?: return
+        val now = SystemClock.elapsedRealtime()
+        nearby.compute(address) { _, old ->
+            if (old == null) {
+                // First sighting: ask the stack once for the cached name and bond state.
+                val stackName = try {
                     device.name
                 } catch (e: SecurityException) {
                     null
                 }
-            nearby[address] = NearbyEntry(name, result.rssi, SystemClock.elapsedRealtime())
+                val bonded = try {
+                    device.bondState == android.bluetooth.BluetoothDevice.BOND_BONDED
+                } catch (e: SecurityException) {
+                    false
+                }
+                NearbyDevice(
+                    address = address,
+                    name = advertisedName ?: stackName,
+                    rssi = rssi,
+                    lastSeenMs = now,
+                    transport = transport,
+                    companyId = companyId,
+                    connectable = connectable,
+                    majorClass = majorClass,
+                    bonded = bonded,
+                    rssiHistory = listOf(rssi)
+                )
+            } else {
+                old.copy(
+                    name = old.name ?: advertisedName,
+                    rssi = rssi,
+                    lastSeenMs = now,
+                    transport = transport,
+                    companyId = companyId ?: old.companyId,
+                    connectable = connectable ?: old.connectable,
+                    majorClass = majorClass ?: old.majorClass,
+                    rssiHistory = (old.rssiHistory + rssi).takeLast(NearbyDevice.MAX_HISTORY)
+                )
+            }
+        }
+    }
+
+    private val scanCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            val device = result.device ?: return
+            val scanRecord = result.scanRecord
+            val manufacturerData = scanRecord?.manufacturerSpecificData
+            val companyId =
+                if (manufacturerData != null && manufacturerData.size() > 0) manufacturerData.keyAt(0) else null
+            record(
+                device = device,
+                advertisedName = scanRecord?.deviceName,
+                rssi = result.rssi,
+                transport = Transport.BLE,
+                companyId = companyId,
+                connectable = result.isConnectable
+            )
         }
 
         override fun onScanFailed(errorCode: Int) {
@@ -399,6 +460,38 @@ class BluetoothCodecManager(context: Context) {
             // Do not retry in a loop: Android throttles apps that restart scans too often.
             // The flag is cleared by the next stopBluetoothScan().
             scanFailed = true
+        }
+    }
+
+    private val discoveryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                android.bluetooth.BluetoothDevice.ACTION_FOUND -> {
+                    val device = IntentCompat.getParcelableExtra(
+                        intent,
+                        android.bluetooth.BluetoothDevice.EXTRA_DEVICE,
+                        android.bluetooth.BluetoothDevice::class.java
+                    ) ?: return
+                    // Without an RSSI extra there is no measurement to show.
+                    if (!intent.hasExtra(android.bluetooth.BluetoothDevice.EXTRA_RSSI)) return
+                    val rssi = intent.getShortExtra(
+                        android.bluetooth.BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE
+                    ).toInt()
+                    val bluetoothClass = IntentCompat.getParcelableExtra(
+                        intent,
+                        android.bluetooth.BluetoothDevice.EXTRA_CLASS,
+                        BluetoothClass::class.java
+                    )
+                    record(
+                        device = device,
+                        advertisedName = intent.getStringExtra(android.bluetooth.BluetoothDevice.EXTRA_NAME),
+                        rssi = rssi,
+                        transport = Transport.CLASSIC,
+                        majorClass = bluetoothClass?.majorDeviceClass
+                    )
+                }
+                BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> classicDiscovering = false
+            }
         }
     }
 
@@ -424,8 +517,10 @@ class BluetoothCodecManager(context: Context) {
         }
     }
 
+    /** Stops the BLE scan and any classic inquiry in progress. */
     @Synchronized
     fun stopBluetoothScan() {
+        stopClassicDiscovery()
         scanFailed = false
         if (!isScanning) return
         isScanning = false
@@ -438,27 +533,79 @@ class BluetoothCodecManager(context: Context) {
         }
     }
 
+    /**
+     * Starts a classic (BR/EDR) inquiry, which finds discoverable devices that do not
+     * advertise over BLE. It runs for about 12 seconds and then stops by itself.
+     *
+     * Only start this on an explicit user action: an inquiry takes radio time away from
+     * active connections and can make Bluetooth audio stutter while it runs.
+     *
+     * @return true if the inquiry started.
+     */
+    @Synchronized
+    fun startClassicDiscovery(): Boolean {
+        if (classicDiscovering) return true
+        if (!hasBluetoothPermission()) return false
+        val adapter = bluetoothAdapter ?: return false
+        if (!discoveryReceiverRegistered) {
+            val filter = IntentFilter().apply {
+                addAction(android.bluetooth.BluetoothDevice.ACTION_FOUND)
+                addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+            }
+            ContextCompat.registerReceiver(
+                context, discoveryReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            discoveryReceiverRegistered = true
+        }
+        classicDiscovering = try {
+            adapter.startDiscovery()
+        } catch (e: SecurityException) {
+            false
+        }
+        return classicDiscovering
+    }
+
+    fun isClassicDiscovering(): Boolean = classicDiscovering
+
+    @Synchronized
+    private fun stopClassicDiscovery() {
+        if (classicDiscovering) {
+            classicDiscovering = false
+            try {
+                bluetoothAdapter?.cancelDiscovery()
+            } catch (e: SecurityException) {
+                // Permission was revoked; the inquiry is already gone.
+            }
+        }
+        if (discoveryReceiverRegistered) {
+            discoveryReceiverRegistered = false
+            try {
+                context.unregisterReceiver(discoveryReceiver)
+            } catch (e: IllegalArgumentException) {
+                // Already unregistered.
+            }
+        }
+    }
+
     private fun pruneStaleNearby() {
-        val cutoff = SystemClock.elapsedRealtime() - NEARBY_TTL_MS
-        nearby.entries.removeAll { it.value.lastSeenMs < cutoff }
+        val now = SystemClock.elapsedRealtime()
+        nearby.entries.removeAll { (_, device) ->
+            val ttl = if (device.transport == Transport.CLASSIC) CLASSIC_TTL_MS else BLE_TTL_MS
+            now - device.lastSeenMs > ttl
+        }
     }
 
-    fun getNearbyDeviceCount(): Int {
+    /** Devices heard recently (30 s for BLE, 2 min for classic), strongest first. */
+    fun getNearbyDevices(): List<NearbyDevice> {
         pruneStaleNearby()
-        return nearby.size
-    }
-
-    /** (name, address, RSSI in dBm) for devices heard in the last [NEARBY_TTL_MS], strongest first. */
-    fun getNearbyDevicesWithRssi(): List<Triple<String, String, Int>> {
-        pruneStaleNearby()
-        return nearby.entries
-            .map { (address, entry) -> Triple(entry.name ?: "Unknown device", address, entry.rssi) }
-            .sortedByDescending { it.third }
+        return nearby.values.sortedByDescending { it.rssi }
     }
 
     private companion object {
         const val TAG = "BluetoothCodecManager"
-        const val NEARBY_TTL_MS = 30_000L
+        const val BLE_TTL_MS = 30_000L
+        // A classic inquiry reports each device once, so keep those entries longer.
+        const val CLASSIC_TTL_MS = 120_000L
 
         val AUDIO_PARAMETER_KEYS = listOf(
             "bt_a2dp_active_codec",

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,8 +43,10 @@ class MainActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Required from targetSdk 35; the Scaffold in MainScreen applies the insets.
+        enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            BccTheme {
                 MainScreen { requestPermissions() }
             }
         }
@@ -75,6 +79,9 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
     val devices by viewModel.devices
     val nearbyDevices by viewModel.nearbyDevices
     val chipsetInfo by viewModel.chipsetInfo
+    val classicDiscovering by viewModel.classicDiscovering
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    val ready = hasPermission && bluetoothEnabled
 
     // Refresh once a second, but only while the screen is visible. Leaving the
     // foreground cancels the loop and stops the BLE scan.
@@ -92,22 +99,54 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
         }
     }
 
-    Column(
-        modifier = Modifier
+    Scaffold(
+        topBar = {
+            Column {
+                TopAppBar(title = { Text("Bluetooth Codec Checker") })
+                if (ready) {
+                    PrimaryTabRow(selectedTabIndex = selectedTab) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            text = { Text("Audio") }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = {
+                                Text(
+                                    if (nearbyDevices.isEmpty()) "Scanner"
+                                    else "Scanner (${nearbyDevices.size})"
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        val contentModifier = Modifier
+            .padding(innerPadding)
             .fillMaxSize()
-            // Edge-to-edge is enforced from targetSdk 35: keep content clear of system bars.
-            .safeDrawingPadding()
-            .padding(16.dp)
-    ) {
-        if (!hasPermission) {
-            PermissionCard(onRequestPermissions)
-        } else if (!bluetoothEnabled) {
-            BluetoothOffCard()
-        } else {
-            LazyColumn(
+        when {
+            !hasPermission -> Box(modifier = contentModifier.padding(16.dp)) {
+                PermissionCard(onRequestPermissions)
+            }
+            !bluetoothEnabled -> Box(modifier = contentModifier.padding(16.dp)) {
+                BluetoothOffCard()
+            }
+            selectedTab == 1 -> ScannerScreen(
+                devices = nearbyDevices,
+                connectedAddresses = devices.map { it.address }.toSet(),
+                classicDiscovering = classicDiscovering,
+                onStartClassicDiscovery = { viewModel.startClassicDiscovery() },
+                modifier = contentModifier
+            )
+            else -> LazyColumn(
+                modifier = contentModifier,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Chipset Info
                 chipsetInfo?.let { info ->
                     item {
                         ChipsetCard(info, devices)
@@ -115,17 +154,24 @@ fun MainScreen(onRequestPermissions: () -> Unit = {}) {
                 }
 
                 item {
-                    BluetoothCongestionCard(devices, nearbyDevices)
+                    // The user's own connected devices are not interference sources.
+                    val connected = devices.map { it.address }.toSet()
+                    BluetoothCongestionCard(
+                        devices,
+                        nearbyDevices
+                            .filter { it.address !in connected }
+                            .map { Triple(it.displayName, it.address, it.rssi) }
+                    )
                 }
-                
-                // Version info at bottom
+
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "v${BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -432,9 +478,11 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
             Box(modifier = Modifier.fillMaxSize()) {
                 // Y-axis values
                 Column(
+                    // Inset so each label lines up with the centre of a card at that latency.
                     modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .height(if (isTablet) 280.dp else 180.dp),
+                        .align(Alignment.TopStart)
+                        .fillMaxHeight()
+                        .padding(top = 16.dp, bottom = 51.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("20", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -467,9 +515,12 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
                     // Position codecs based on quality vs latency with collision detection
                     val codecPositions = mutableMapOf<String, Pair<Float, Float>>()
                     val occupiedAreas = mutableListOf<Pair<Float, Float>>()
-                    val cardSize = if (isTablet) 65f else 55f
+                    val cardSize = if (isTablet) 65f else 46f
                     
-                    BluetoothCodecs.ALL_CODECS.forEach { codecName ->
+                    // Place low-latency codecs first so the crowded top rows are nudged the least.
+                    listOf(
+                        "LC3", "aptX LL", "SBC", "aptX", "aptX Adaptive", "AAC", "aptX HD", "LDAC"
+                    ).forEach { codecName ->
                         BluetoothCodecs.CODEC_INFO[codecName]?.let { codecInfo ->
                             // Extract actual latency values from the data
                             val latencyValue = when(codecName) {
@@ -498,37 +549,28 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
                             }
                             
                             // Normalize latency for Y positioning (lower latency = higher on chart)
-                            val normalizedLatency = ((latencyValue - 20f) / (200f - 20f)).coerceIn(0f, 1f)
+                            val normalizedLatency = latencyAxisFraction(latencyValue)
                             
                             var targetX = qualityRanking * (availableWidth - cardSize)
                             var targetY = normalizedLatency * (availableHeight - cardSize)
                             
-                            // Collision detection and repositioning
-                            val minDistance = cardSize + 5f
-                            var attempts = 0
-                            while (attempts < 20) {
-                                val hasCollision = occupiedAreas.any { (existingX, existingY) ->
-                                    val distance = kotlin.math.sqrt((targetX - existingX) * (targetX - existingX) + 
-                                                                  (targetY - existingY) * (targetY - existingY))
-                                    distance < minDistance
-                                }
-                                
-                                if (!hasCollision) break
-                                
-                                // Spiral repositioning around original position
-                                val angle = attempts * 0.6f
-                                val radius = (attempts + 1) * 8f
-                                val baseX = qualityRanking * (availableWidth - cardSize)
-                                val baseY = normalizedLatency * (availableHeight - cardSize)
-                                targetX = baseX + radius * kotlin.math.cos(angle).toFloat()
-                                targetY = baseY + radius * kotlin.math.sin(angle).toFloat()
-                                
-                                // Ensure within bounds
-                                targetX = targetX.coerceIn(0f, availableWidth - cardSize)
-                                targetY = targetY.coerceIn(0f, availableHeight - cardSize)
+                            // Latency is the measured axis, so keep Y exact and resolve overlaps by
+                            // nudging sideways only: 0, +step, -step, +2*step, ...
+                            val baseX = targetX
+                            val step = cardSize / 2f
+                            fun overlaps(x: Float) = occupiedAreas.any { (existingX, existingY) ->
+                                kotlin.math.abs(x - existingX) < cardSize &&
+                                    kotlin.math.abs(targetY - existingY) < cardSize
+                            }
+                            var attempts = 1
+                            while (overlaps(targetX) && attempts <= 16) {
+                                val magnitude = ((attempts + 1) / 2) * step
+                                val candidate = if (attempts % 2 == 1) baseX + magnitude else baseX - magnitude
+                                if (candidate in 0f..(availableWidth - cardSize)) targetX = candidate
                                 attempts++
                             }
-                            
+                            // If nothing was free the card stays at its last candidate and may overlap.
+
                             occupiedAreas.add(Pair(targetX, targetY))
                             codecPositions[codecName] = Pair(targetX, targetY)
                         }
@@ -556,18 +598,22 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
                                         else -> Color.Gray.copy(alpha = 0.4f)
                                     },
                                     modifier = Modifier
-                                        .size(if (isTablet) 65.dp else 55.dp)
+                                        .size(if (isTablet) 65.dp else 46.dp)
                                         .padding(2.dp)
                                 ) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center,
-                                        modifier = Modifier.padding(6.dp)
+                                        modifier = Modifier.padding(if (isTablet) 6.dp else 2.dp)
                                     ) {
                                         Text(
                                             text = codecName,
                                             fontSize = if (isTablet) 10.sp else 8.sp,
-                                            color = if (isActivelyStreaming || isSupported) Color.White else Color.Gray,
+                                            color = when {
+                                                isActivelyStreaming -> MaterialTheme.colorScheme.onPrimary
+                                                isSupported -> MaterialTheme.colorScheme.onSecondary
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
                                             fontWeight = FontWeight.Bold,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                             lineHeight = if (isTablet) 11.sp else 9.sp,
@@ -580,7 +626,11 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
                                             Text(
                                                 text = "Hi-Res",
                                                 fontSize = if (isTablet) 7.sp else 6.sp,
-                                                color = Color(0xFFFFD700),
+                                                color = when {
+                                                    isActivelyStreaming -> MaterialTheme.colorScheme.onPrimary
+                                                    isSupported -> MaterialTheme.colorScheme.onSecondary
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                },
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
@@ -640,6 +690,20 @@ fun CodecChart(supportedCodecs: List<String>, connectedDevices: List<com.bluetoo
             }
         }
     }
+}
+
+/**
+ * Vertical position (0 = top, 1 = bottom) for a latency on the chart's Y axis, whose
+ * labels 20 / 40 / 80 / 130 / 200 ms are evenly spaced rather than linear.
+ */
+fun latencyAxisFraction(latencyMs: Float): Float {
+    val stops = floatArrayOf(20f, 40f, 80f, 130f, 200f)
+    if (latencyMs <= stops.first()) return 0f
+    if (latencyMs >= stops.last()) return 1f
+    val upper = stops.indexOfFirst { latencyMs <= it }
+    val low = stops[upper - 1]
+    val high = stops[upper]
+    return (upper - 1 + (latencyMs - low) / (high - low)) / (stops.size - 1)
 }
 
 fun isHiResCodec(sampleRate: String): Boolean {
@@ -743,30 +807,6 @@ fun BluetoothCongestionCard(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "${rssi}dBm",
-                                        fontSize = 9.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                            } ?: run {
-                                // Show estimated signal strength when RSSI is unavailable
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    repeat(4) { index ->
-                                        // Show 3/4 bars for connected device (good signal)
-                                        Box(
-                                            modifier = Modifier
-                                                .width(3.dp)
-                                                .height((6 + index * 2).dp)
-                                                .background(
-                                                    if (index < 3) Color.Green else Color.Gray.copy(alpha = 0.3f),
-                                                    androidx.compose.foundation.shape.RoundedCornerShape(1.dp)
-                                                )
-                                        )
-                                        if (index < 3) Spacer(modifier = Modifier.width(1.dp))
-                                    }
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "-60dBm",
                                         fontSize = 9.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

@@ -12,7 +12,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val hasPermission = mutableStateOf(false)
     val bluetoothEnabled = mutableStateOf(true)
     val devices = mutableStateOf<List<BluetoothDevice>>(emptyList())
-    val nearbyDevices = mutableStateOf<List<Triple<String, String, Int>>>(emptyList())
+    val nearbyDevices = mutableStateOf<List<NearbyDevice>>(emptyList())
+    val classicDiscovering = mutableStateOf(false)
     val chipsetInfo = mutableStateOf<ChipsetInfo?>(null)
     val isSearching = mutableStateOf(false)
 
@@ -33,6 +34,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             codecManager.stopBluetoothScan()
             devices.value = emptyList()
             nearbyDevices.value = emptyList()
+            classicDiscovering.value = false
             return
         }
 
@@ -43,12 +45,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Triple(
                     codecManager.getChipsetInfo(),
                     codecManager.getConnectedDevices(),
-                    codecManager.getNearbyDevicesWithRssi()
+                    codecManager.getNearbyDevices()
                 )
             }
             chipsetInfo.value = chipset
             devices.value = connected
             nearbyDevices.value = nearby
+            classicDiscovering.value = codecManager.isClassicDiscovering()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -58,9 +61,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Starts a ~12 s classic inquiry. Only call from an explicit user action: it can make
+     * Bluetooth audio stutter while it runs.
+     */
+    fun startClassicDiscovery() {
+        classicDiscovering.value = codecManager.startClassicDiscovery()
+    }
+
     /** Call when the UI leaves the foreground. */
     fun stopScan() {
         codecManager.stopBluetoothScan()
+        classicDiscovering.value = false
     }
 
     override fun onCleared() {
